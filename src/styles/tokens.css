@@ -1,0 +1,27 @@
+:root {
+  --ink: #100e0c;
+  --ink-2: #1a1612;
+  --parchment: #f4ecd5;
+  --parchment-dim: #cbbd9a;
+  --frame: #191202;
+  --candle: #c4a35a;
+  --candle-soft: #e8c84a;
+  --ash: #8a7d68;
+  --blood: #7a2e24;
+  --grain-opacity: 0.07;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --page-max: 1200px;
+  --phone-gutter: 20px;
+  --button-h: 48px;
+  --card-ratio: 5 / 8;
+  --font-display: 'LXGW WenKai Screen', 'Songti SC', 'Noto Serif SC', serif;
+  --font-body: 'Noto Serif SC', 'Songti SC', serif;
+  --font-latin: 'Cormorant Garamond', 'Noto Serif SC', serif;
+}

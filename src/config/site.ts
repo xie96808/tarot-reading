@@ -1,0 +1,14 @@
+export const SITE_NAME = '烛下塔罗';
+export const SITE_TAGLINE = 'A quiet table for the RWS deck';
+export const SITE_URL = process.env.SITE_URL ?? 'https://tarot.xieyw.top';
+export const ICP_NUMBER = process.env.ICP_NUMBER ?? '';
+export const DECK_VERSION = 'rws-1';
+export const LEXICON_VERSION = 'zh-1';
+export const ALGO_ID = 'fy-hkdf-2';
+export const SHARE_PROTOCOL_VERSION = 1 as const;
+export const SESSION_STORAGE_KEY = 'tarot.ritual.v2';
+export const HISTORY_STORAGE_KEY = 'tarot.history.v2';
+export const MAX_QUESTION_CODEPOINTS = 200;
+export const MAX_NOTE_CODEPOINTS = 200;
+export const MAX_READING_ID_LENGTH = 1500;
+export const HISTORY_LIMIT = 20;

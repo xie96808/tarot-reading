@@ -1,0 +1,25 @@
+.footer {
+  max-width: var(--page-max);
+  margin: var(--space-8) auto 0;
+  padding: var(--space-6) var(--phone-gutter) var(--space-7);
+  color: var(--ash);
+  font-size: 14px;
+  line-height: 1.7;
+  border-top: 1px solid rgba(196, 163, 90, 0.18);
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.links {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.links a {
+  color: var(--parchment-dim);
+}
