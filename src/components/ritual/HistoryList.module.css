@@ -1,0 +1,25 @@
+.wrap {
+  margin-top: 48px;
+  text-align: left;
+  color: var(--ash);
+  font-size: 14px;
+}
+
+.wrap ul {
+  list-style: none;
+  padding: 0;
+}
+
+.wrap li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+}
+
+.wrap button {
+  background: transparent;
+  color: var(--ash);
+  border: none;
+  min-height: 44px;
+}

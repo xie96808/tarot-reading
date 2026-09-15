@@ -16,6 +16,7 @@ import type { PointerSample } from '@/lib/rng';
 import { CardBack } from './CardBack';
 import { Tableau } from './Tableau';
 import { ReadingView } from './ReadingView';
+import { HistoryList } from './HistoryList';
 import styles from './RitualApp.module.css';
 
 function chapter(stage: RitualSession['stage']): string {
@@ -149,6 +150,7 @@ export function RitualApp() {
             {COPY.enterPrimary}
           </button>
           <Link href="/about">{COPY.enterSecondary}</Link>
+          <HistoryList />
         </section>
       ) : null}
 
