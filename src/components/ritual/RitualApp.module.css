@@ -1,0 +1,152 @@
+.shell {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 24px 20px 96px;
+  position: relative;
+}
+
+.chapter {
+  color: var(--candle);
+  letter-spacing: 0.28em;
+  font-size: 13px;
+  text-align: center;
+}
+
+.center {
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+  text-align: center;
+}
+
+.center h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(28px, 5vw, 40px);
+}
+
+.primary,
+.ghost,
+.center button,
+.spreads button {
+  min-height: 48px;
+  background: transparent;
+  color: var(--parchment);
+  border: 1px solid rgba(196, 163, 90, 0.35);
+}
+
+.primary {
+  border-color: var(--candle);
+}
+
+.ghost,
+.abandon {
+  color: var(--ash);
+  border: none;
+  background: transparent;
+}
+
+.abandon {
+  position: absolute;
+  right: 20px;
+  top: 16px;
+  min-height: 44px;
+}
+
+.field {
+  min-height: 140px;
+  resize: vertical;
+  background: var(--ink-2);
+  color: var(--parchment);
+  border: 1px solid rgba(196, 163, 90, 0.25);
+  padding: 12px;
+}
+
+.spreads {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.spreads button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  text-align: left;
+}
+
+.chosen button {
+  border-color: var(--candle);
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.pile {
+  position: relative;
+  width: 150px;
+  height: 240px;
+  margin: 12px auto;
+  cursor: grab;
+}
+
+.pile img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+}
+
+.pile img:nth-child(1) {
+  transform: rotate(-8deg);
+}
+
+.pile img:nth-child(2) {
+  transform: rotate(2deg);
+}
+
+.pile img:nth-child(3) {
+  transform: rotate(9deg);
+}
+
+.muted,
+.warn {
+  color: var(--ash);
+  font-size: 14px;
+}
+
+.warn {
+  color: var(--candle);
+}
+
+.examples {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal {
+  position: fixed;
+  inset: 20% 12%;
+  background: var(--ink-2);
+  border: 1px solid var(--candle);
+  padding: 24px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shareBox {
+  min-height: 80px;
+  font-size: 13px;
+}

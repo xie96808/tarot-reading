@@ -1,0 +1,30 @@
+.face {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--card-ratio);
+}
+
+.reversed {
+  transform: rotate(180deg);
+}
+
+.fallback {
+  aspect-ratio: var(--card-ratio);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid var(--candle);
+  padding: 12px;
+  text-align: center;
+}
+
+.fallback button {
+  min-height: 44px;
+  background: transparent;
+  color: var(--candle);
+  border: 1px solid var(--candle);
+  padding: 0 16px;
+}

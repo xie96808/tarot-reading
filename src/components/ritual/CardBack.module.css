@@ -1,0 +1,9 @@
+.back {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--card-ratio);
+  border-radius: 0;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}

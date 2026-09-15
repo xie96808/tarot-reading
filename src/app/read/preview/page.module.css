@@ -1,0 +1,57 @@
+.main {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--space-5) var(--phone-gutter) var(--space-8);
+}
+
+.banner {
+  text-align: center;
+  color: var(--candle);
+  letter-spacing: 0.16em;
+  font-size: 13px;
+}
+
+.table {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 180px));
+  justify-content: center;
+  gap: var(--space-5);
+  margin: var(--space-6) 0 var(--space-7);
+}
+
+.table figure {
+  margin: 0;
+}
+
+.table figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: var(--space-3);
+  text-align: center;
+}
+
+.page {
+  background: var(--parchment);
+  color: var(--frame);
+  padding: var(--space-6);
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.page h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 22px;
+}
+
+.note {
+  color: #5c4f3a;
+  font-size: 15px;
+}
+
+@media (max-width: 720px) {
+  .table {
+    grid-template-columns: minmax(0, 220px);
+  }
+}

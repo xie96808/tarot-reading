@@ -1,0 +1,30 @@
+.page {
+  background: var(--parchment);
+  color: var(--frame);
+  padding: 32px 28px 48px;
+  max-width: 720px;
+  margin: 32px auto 0;
+}
+
+.page h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 22px;
+  margin: 28px 0 8px;
+}
+
+.question,
+.disclaimer,
+.frame,
+.muted {
+  color: #5c4f3a;
+}
+
+.page details {
+  margin: 8px 0;
+}
+
+.page summary {
+  cursor: pointer;
+  color: #7a2e24;
+}

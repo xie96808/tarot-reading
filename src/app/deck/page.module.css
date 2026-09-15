@@ -1,0 +1,31 @@
+.main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.main ul {
+  columns: 2;
+  padding-left: 0;
+  list-style: none;
+}
+
+.main li {
+  break-inside: avoid;
+  margin: 6px 0;
+}
+
+.main a {
+  color: var(--parchment);
+  text-decoration: none;
+}
+
+.main a:hover {
+  color: var(--candle);
+}
+
+@media (max-width: 640px) {
+  .main ul {
+    columns: 1;
+  }
+}

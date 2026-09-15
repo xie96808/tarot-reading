@@ -1,0 +1,66 @@
+.slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.crossing {
+  z-index: 2;
+}
+
+.crossing .flip {
+  transform: rotateZ(90deg);
+}
+
+.flip {
+  width: 100%;
+  perspective: 900px;
+}
+
+.inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 560ms ease;
+}
+
+.inner.revealed {
+  transform: rotateY(180deg);
+}
+
+.back,
+.front {
+  width: 100%;
+}
+
+.front {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  backface-visibility: hidden;
+}
+
+.back {
+  backface-visibility: hidden;
+}
+
+.label {
+  margin: 0;
+  font-size: 14px;
+  color: var(--parchment-dim);
+}
+
+.action {
+  min-height: 44px;
+  min-width: 44px;
+  background: transparent;
+  color: var(--candle);
+  border: 1px solid rgba(196, 163, 90, 0.4);
+  padding: 0 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inner {
+    transition: none;
+  }
+}

@@ -1,0 +1,15 @@
+[Unit]
+Description=烛下塔罗 Next.js standalone
+After=network.target
+
+[Service]
+Type=simple
+User=tarot
+WorkingDirectory=/srv/tarot/current
+EnvironmentFile=/etc/tarot.env
+ExecStart=/usr/bin/node /srv/tarot/current/server.js
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

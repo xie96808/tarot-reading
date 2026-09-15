@@ -1,0 +1,82 @@
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 180px));
+  justify-content: center;
+  gap: 24px;
+}
+
+.item,
+.celticSlot {
+  position: relative;
+}
+
+.hit {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  z-index: 3;
+}
+
+.selected :global(.label),
+.selected {
+  color: var(--candle);
+}
+
+.celticWrap {
+  overflow: auto;
+}
+
+.celtic {
+  position: relative;
+  width: min(100%, 720px);
+  height: 650px;
+  margin: 0 auto;
+}
+
+.celticSlot {
+  position: absolute;
+  width: 96px;
+  transform: translate(-50%, -50%);
+}
+
+.step {
+  display: none;
+  max-width: 240px;
+  margin: 0 auto 24px;
+  text-align: center;
+}
+
+.stepNav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.stepNav button {
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  color: var(--parchment-dim);
+  border: 1px solid rgba(196, 163, 90, 0.3);
+}
+
+.navCurrent {
+  color: var(--candle) !important;
+  border-color: var(--candle) !important;
+}
+
+@media (max-width: 1023px) {
+  .celtic {
+    display: none;
+  }
+
+  .step {
+    display: block;
+  }
+
+  .row {
+    display: none;
+  }
+}
