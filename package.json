@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "check:content": "node scripts/check-content.mjs",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "ingest": "node scripts/ingest-cards.mjs"
