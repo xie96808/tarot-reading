@@ -11,13 +11,25 @@ type Manifest = {
 
 function urlsFor(cardId: CardId) {
   const file = path.join(process.cwd(), 'public/cards/rws-1/manifest.json');
-  const manifest = JSON.parse(readFileSync(file, 'utf8')) as Manifest;
-  const card = manifest.cards.find((item) => item.cardId === cardId);
-  if (!card) return null;
-  return card.variants;
+  try {
+    const manifest = JSON.parse(readFileSync(file, 'utf8')) as Manifest;
+    return manifest.cards.find((item) => item.cardId === cardId)?.variants ?? null;
+  } catch {
+    return null;
+  }
 }
 
-export function CardFaceStatic({ cardId, alt }: { cardId: CardId; alt: string }) {
+export function CardFaceStatic({
+  cardId,
+  alt,
+  sizes = '(max-width: 720px) 70vw, 320px',
+  width = 'min(100%, 320px)',
+}: {
+  cardId: CardId;
+  alt: string;
+  sizes?: string;
+  width?: string;
+}) {
   const variants = urlsFor(cardId);
   if (!variants) return null;
   return (
@@ -25,17 +37,18 @@ export function CardFaceStatic({ cardId, alt }: { cardId: CardId; alt: string })
       <source
         type="image/webp"
         srcSet={`${variants[320].webp} 320w, ${variants[480].webp} 480w, ${variants[800].webp} 800w`}
-        sizes="(max-width: 720px) 70vw, 320px"
+        sizes={sizes}
       />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={variants[480].jpeg}
+        src={variants[320].jpeg}
         srcSet={`${variants[320].jpeg} 320w, ${variants[480].jpeg} 480w, ${variants[800].jpeg} 800w`}
-        sizes="(max-width: 720px) 70vw, 320px"
+        sizes={sizes}
         width={800}
         height={1280}
         alt={alt}
-        style={{ width: 'min(100%, 320px)', height: 'auto' }}
+        loading="lazy"
+        style={{ width, height: 'auto' }}
       />
     </picture>
   );

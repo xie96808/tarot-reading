@@ -1,0 +1,39 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0;
+}
+
+.filters button {
+  min-height: 44px;
+  padding: 0 14px;
+  background: transparent;
+  color: var(--parchment-dim);
+  border: 1px solid rgba(196, 163, 90, 0.28);
+}
+
+.active {
+  color: var(--parchment) !important;
+  border-color: var(--candle) !important;
+}
+
+.grid {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 20px;
+}
+
+.grid a {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--parchment);
+  text-decoration: none;
+}
+
+.grid a:hover {
+  color: var(--candle);
+}
