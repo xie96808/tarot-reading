@@ -11,6 +11,7 @@ export const COPY = {
   navAbout: '关于',
   navMethod: '方法',
   navPrivacy: '隐私',
+  navLeaveHint: '会保留本标签页进度。确定离开当前仪式页？',
   footerDisclaimer:
     '塔罗用于象征阅读与自我观照，不替代专业判断。不构成医疗、法律或财务建议。',
   icp: ICP_NUMBER,
