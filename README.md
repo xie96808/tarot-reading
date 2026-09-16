@@ -15,6 +15,13 @@ npm run dev
 
 牌面源自仓库中的 `RWS_78_aligned.zip`。`npm run ingest` 生成 `public/cards/rws-1/`，该目录不提交。
 
-## 不部署
+## 检查
 
-本仓库包含 nginx / systemd 样例（`deploy/`），但默认不上线。需要服务器地址、备案号后再做发布。
+```bash
+npm test
+npm run check:content
+npm run test:e2e
+npm run package-release
+```
+
+部署样例在 `deploy/`。生产 DNS、证书和备案号由运维填写，不在本仓库执行。
