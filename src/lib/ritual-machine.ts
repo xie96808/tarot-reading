@@ -328,15 +328,18 @@ function reduceReveal(
   return state;
 }
 
-export function persistable(state: RitualSession): unknown {
+export function persistable(state: RitualSession): RitualSession {
   if (state.stage === 'shuffle') {
-    return { ...state, shufflePhase: 'idle', operationId: null };
+    return { ...state, shufflePhase: 'idle', operationId: null, abandonOpen: false };
   }
-  if (state.stage === 'close') {
-    const { receipt, ...rest } = state;
-    return { ...rest, receipt: { ...receipt } };
+  if (state.stage === 'cut') {
+    return { ...state, operationId: null, abandonOpen: false };
   }
-  return state;
+  return { ...state, abandonOpen: false };
+}
+
+export function canResume(session: RitualSession | null): session is RitualSession {
+  return Boolean(session && session.stage !== 'enter');
 }
 
 export type OrientationName = Orientation;

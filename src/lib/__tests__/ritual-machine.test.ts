@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CARD_IDS } from '@/data/card-ids';
-import { createSession, reduce, type RitualSession } from '@/lib/ritual-machine';
+import { canResume, createSession, persistable, reduce, type RitualSession } from '@/lib/ritual-machine';
 import type { ShuffledCard } from '@/lib/shuffle';
 
 function fakeDeck(): ShuffledCard[] {
@@ -101,6 +101,19 @@ describe('ritual machine', () => {
     expect(state.stage === 'read' && state.draws).toEqual(draws);
     state = reduce(state, { type: 'SET_VIEW', view: 'table' });
     expect(state.stage === 'read' && state.view).toBe('table');
+  });
+
+  it('does not treat a fresh enter as resumable, and parks shuffle on idle', () => {
+    expect(canResume(createSession())).toBe(false);
+    let state = walkToShuffle();
+    expect(canResume(state)).toBe(true);
+    state = reduce(state, { type: 'AUTO_SHUFFLE', operationId: 'live' });
+    const parked = persistable(state);
+    expect(parked.stage).toBe('shuffle');
+    if (parked.stage === 'shuffle') {
+      expect(parked.shufflePhase).toBe('idle');
+      expect(parked.operationId).toBeNull();
+    }
   });
 
   it('abandon confirm starts a new session', () => {

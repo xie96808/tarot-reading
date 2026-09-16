@@ -21,6 +21,8 @@ export const COPY = {
   enterSecondary: '先了解如何抽牌',
   resumeContinue: '继续这局',
   resumeRestart: '放下，重新开始',
+  resumeBody: '桌上还有一局没有走完。继续不会重洗；重新开始会放下这副牌。',
+  resumeRestartConfirm: '未完成的一局会被放下，无法用同一副牌继续。确定重新开始？',
   questionTitle: '此刻，什么事占着你的心？',
   questionHint: '试着问一个关于处境和选择的问题，而不是一个绝对的是或否。',
   questionPrivacy: '问题默认只留在当前浏览器。你可以不保存，也可以在分享前去掉它。',

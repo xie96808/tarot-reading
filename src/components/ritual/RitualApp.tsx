@@ -8,7 +8,7 @@ import { CARDS } from '@/data/lexicons/zh-1';
 import { composeReading } from '@/lib/reading';
 import { encodeReading } from '@/lib/reading-codec';
 import { commitShuffle, newOperationId, randomCutIndex } from '@/lib/ritual-effects';
-import { createSession, reduce, type RitualSession } from '@/lib/ritual-machine';
+import { canResume, createSession, persistable, reduce, type RitualSession } from '@/lib/ritual-machine';
 import { clearSession, loadSession, pushHistory, saveSession } from '@/lib/storage';
 import { loadFaceIndex, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
@@ -44,6 +44,8 @@ export function RitualApp() {
   const [pageHidden, setPageHidden] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [handPointer, setHandPointer] = useState({ x: 0, y: 0 });
+  const [pendingResume, setPendingResume] = useState<RitualSession | null>(null);
+  const [restartAsk, setRestartAsk] = useState(false);
 
   const dispatch = useCallback((event: Parameters<typeof reduce>[1]) => {
     setState((current) => reduce(current, event));
@@ -51,7 +53,9 @@ export function RitualApp() {
 
   useEffect(() => {
     const restored = loadSession();
-    if (restored) setState(restored);
+    if (canResume(restored)) {
+      setPendingResume(persistable(restored));
+    }
     setHydrated(true);
     loadFaceIndex().then(setFaces).catch(() => undefined);
     setReducedMotion(prefersReducedMotion());
@@ -68,9 +72,10 @@ export function RitualApp() {
 
   useEffect(() => {
     if (!hydrated) return;
-    const result = saveSession(state);
+    if (pendingResume && state.stage === 'enter') return;
+    const result = saveSession(persistable(state));
     if (result === 'memory') setStorageNote(true);
-  }, [state, hydrated]);
+  }, [state, hydrated, pendingResume]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -163,6 +168,24 @@ export function RitualApp() {
           </button>
         </div>
       ) : null}
+      {restartAsk ? (
+        <div className={styles.modal} role="dialog" aria-modal="true">
+          <p>{COPY.resumeRestartConfirm}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setPendingResume(null);
+              setRestartAsk(false);
+              setState(createSession());
+            }}
+          >
+            {COPY.resumeRestart}
+          </button>
+          <button type="button" onClick={() => setRestartAsk(false)}>
+            {COPY.resumeContinue}
+          </button>
+        </div>
+      ) : null}
       {state.stage !== 'enter' && state.stage !== 'close' ? (
         <button type="button" className={styles.abandon} onClick={() => dispatch({ type: 'ABANDON_REQUEST' })}>
           放弃本局
@@ -174,10 +197,39 @@ export function RitualApp() {
           <div className={styles.candle} aria-hidden="true" />
           <h1>{COPY.enterTitle}</h1>
           <p>{COPY.enterBody}</p>
-          <button type="button" className={styles.primary} onClick={() => dispatch({ type: 'ACK_ENTER' })}>
-            {COPY.enterPrimary}
-          </button>
-          <Link href="/about">{COPY.enterSecondary}</Link>
+          {pendingResume ? (
+            <>
+              <p className={styles.warn}>{COPY.resumeBody}</p>
+              <button
+                type="button"
+                className={styles.primary}
+                autoFocus
+                onClick={() => {
+                  const next = pendingResume;
+                  setPendingResume(null);
+                  setRestartAsk(false);
+                  setState(next);
+                }}
+              >
+                {COPY.resumeContinue}
+              </button>
+              <button type="button" className={styles.ghost} onClick={() => setRestartAsk(true)}>
+                {COPY.resumeRestart}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={styles.primary}
+                autoFocus
+                onClick={() => dispatch({ type: 'ACK_ENTER' })}
+              >
+                {COPY.enterPrimary}
+              </button>
+              <Link href="/about">{COPY.enterSecondary}</Link>
+            </>
+          )}
           <HistoryList />
         </section>
       ) : null}
