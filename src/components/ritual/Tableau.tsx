@@ -90,9 +90,14 @@ export function Tableau({
               <div
                 key={position.id}
                 role="listitem"
-                className={`${styles.celticSlot} ${selectedPositionId === position.id ? styles.selected : ''}`}
+                className={`${styles.celticSlot} ${selectedPositionId === position.id ? styles.selected : ''} ${position.id === 'challenge' ? styles.crossingSlot : ''} ${position.id === 'present' ? styles.presentSlot : ''}`}
                 style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
               >
+                {position.id === 'present' ? (
+                  <button type="button" className={styles.presentAccess} onClick={() => onSelect('present')}>
+                    现状
+                  </button>
+                ) : null}
                 <button type="button" className={styles.hit} onClick={() => onSelect(position.id)}>
                   <span className="visually-hidden">{position.nameZh}</span>
                 </button>

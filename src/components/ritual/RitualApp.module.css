@@ -151,6 +151,32 @@
   font-size: 13px;
 }
 
+.viewSwitch {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0 24px;
+}
+
+.viewSwitch button {
+  min-height: 44px;
+  min-width: 120px;
+  background: transparent;
+  color: var(--parchment-dim);
+  border: 1px solid rgba(196, 163, 90, 0.3);
+}
+
+.chosenView {
+  color: var(--parchment) !important;
+  border-color: var(--candle) !important;
+}
+
+.tableParked {
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
 .stage {
   animation: stageIn 360ms ease both;
 }

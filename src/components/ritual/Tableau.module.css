@@ -12,7 +12,10 @@
 
 .hit {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  aspect-ratio: var(--card-ratio);
   opacity: 0;
   z-index: 3;
 }
@@ -37,6 +40,29 @@
   position: absolute;
   width: 96px;
   transform: translate(-50%, -50%);
+}
+
+.presentSlot {
+  z-index: 1;
+}
+
+.crossingSlot {
+  z-index: 3;
+}
+
+.presentAccess {
+  position: absolute;
+  left: -58px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  background: var(--ink-2);
+  color: var(--candle);
+  border: 1px solid rgba(196, 163, 90, 0.45);
+  font-size: 13px;
 }
 
 .step {

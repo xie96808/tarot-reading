@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MOTION,
+  autoUprightDelayMs,
   dealDelayMs,
   dealDurationMs,
   shuffleCommitHoldMs,
@@ -27,6 +28,12 @@ describe('shuffle and cut motion helpers', () => {
   it('holds the riffle on screen while crypto finishes, unless reduced', () => {
     expect(shuffleCommitHoldMs(false)).toBe(900);
     expect(shuffleCommitHoldMs(true)).toBe(0);
+  });
+
+  it('delays auto-upright until after the flip, and skips delay when reduced', () => {
+    expect(autoUprightDelayMs(false, false)).toBeNull();
+    expect(autoUprightDelayMs(true, true)).toBe(0);
+    expect(autoUprightDelayMs(true, false)).toBe(MOTION.flipMs + MOTION.uprightPauseMs);
   });
 
   it('caps visible packets so the DOM never mounts 78 faces', () => {

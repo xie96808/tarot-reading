@@ -361,22 +361,25 @@ export function RitualApp() {
               </div>
             </>
           ) : null}
-          <Tableau
-            spreadId={state.spreadId}
-            draws={state.draws}
-            revealed={state.revealed}
-            selectedPositionId={state.selectedPositionId}
-            faces={faces}
-            dealing={state.stage === 'deal'}
-            onSelect={(positionId) => dispatch({ type: 'SELECT_POSITION', positionId })}
-            onReveal={
-              state.stage === 'reveal'
-                ? (positionId) => dispatch({ type: 'REVEAL_POSITION', positionId })
-                : undefined
-            }
-          />
+          <div className={state.stage === 'read' && state.view === 'page' ? styles.tableParked : undefined}>
+            <Tableau
+              spreadId={state.spreadId}
+              draws={state.draws}
+              revealed={state.revealed}
+              selectedPositionId={state.selectedPositionId}
+              faces={faces}
+              dealing={state.stage === 'deal'}
+              onSelect={(positionId) => dispatch({ type: 'SELECT_POSITION', positionId })}
+              onReveal={
+                state.stage === 'reveal'
+                  ? (positionId) => dispatch({ type: 'REVEAL_POSITION', positionId })
+                  : undefined
+              }
+            />
+          </div>
           {state.stage === 'reveal' ? (
             <div className={styles.center}>
+              <p className={styles.muted}>{COPY.reversedHint}</p>
               <button type="button" className={styles.primary} onClick={() => dispatch({ type: 'REVEAL_NEXT' })}>
                 {COPY.revealAction}
               </button>
@@ -384,6 +387,22 @@ export function RitualApp() {
           ) : null}
           {state.stage === 'read' && reading ? (
             <>
+              <div className={styles.viewSwitch}>
+                <button
+                  type="button"
+                  className={state.view === 'table' ? styles.chosenView : undefined}
+                  onClick={() => dispatch({ type: 'SET_VIEW', view: 'table' })}
+                >
+                  {COPY.viewTable}
+                </button>
+                <button
+                  type="button"
+                  className={state.view === 'page' ? styles.chosenView : undefined}
+                  onClick={() => dispatch({ type: 'SET_VIEW', view: 'page' })}
+                >
+                  {COPY.viewPage}
+                </button>
+              </div>
               <ReadingView question={state.question.trim()} doc={reading} />
               <div className={styles.center}>
                 <label>

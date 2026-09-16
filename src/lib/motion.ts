@@ -10,6 +10,8 @@ export const MOTION = {
   dealGapCelticMs: 100,
   dealCapMs: 1800,
   flipMs: 560,
+  uprightPauseMs: 240,
+  uprightMs: 780,
   readFadeMs: 420,
 } as const;
 
@@ -45,6 +47,12 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+export function autoUprightDelayMs(reversed: boolean, reduced: boolean): number | null {
+  if (!reversed) return null;
+  if (reduced) return 0;
+  return MOTION.flipMs + MOTION.uprightPauseMs;
 }
 
 export function visibleCutCounts(cutIndex: number): { top: number; bottom: number } {

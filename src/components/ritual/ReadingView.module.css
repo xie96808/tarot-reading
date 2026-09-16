@@ -24,11 +24,24 @@
   }
 }
 
-.page h2 {
+.page h2,
+.page h3 {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 22px;
   margin: 28px 0 8px;
+}
+
+.page h2 {
+  font-size: 22px;
+}
+
+.page h3 {
+  font-size: 18px;
+}
+
+.group {
+  padding-top: 8px;
+  border-top: 1px solid rgba(25, 18, 2, 0.12);
 }
 
 .question,

@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { FaceUrls } from '@/lib/faces';
 import { COPY } from '@/i18n/zh-CN';
+import { autoUprightDelayMs, MOTION, prefersReducedMotion } from '@/lib/motion';
+import { faceImageRotation, type FaceView } from '@/lib/transforms';
 import { CardBack } from './CardBack';
 import { CardFace } from './CardFace';
 import styles from './Card3D.module.css';
@@ -24,7 +26,7 @@ export function Card3D({
   revealed,
   urls,
   alt,
-  reversed,
+  reversed = false,
   sizes,
   onReveal,
   label,
@@ -32,21 +34,52 @@ export function Card3D({
   dealDelayMs = 0,
   dealing = false,
 }: Card3DProps) {
+  const startedRevealed = useRef(revealed);
+  const manualRef = useRef(false);
   const [flipped, setFlipped] = useState(revealed);
+  const [view, setView] = useState<FaceView>(revealed && reversed ? 'readable' : 'as-dealt');
+  const [manual, setManual] = useState(false);
+
+  useEffect(() => {
+    manualRef.current = manual;
+  }, [manual]);
 
   useEffect(() => {
     if (!revealed) {
+      startedRevealed.current = false;
+      manualRef.current = false;
       setFlipped(false);
+      setView('as-dealt');
+      setManual(false);
       return;
     }
+    if (startedRevealed.current) return;
+    startedRevealed.current = true;
     const frame = requestAnimationFrame(() => setFlipped(true));
-    return () => cancelAnimationFrame(frame);
-  }, [revealed]);
+    const delay = autoUprightDelayMs(reversed, prefersReducedMotion());
+    const timer =
+      delay === null
+        ? undefined
+        : window.setTimeout(() => {
+            if (!manualRef.current) setView('readable');
+          }, delay);
+    return () => {
+      cancelAnimationFrame(frame);
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [revealed, reversed]);
+
+  const rotation = faceImageRotation(reversed, view);
 
   return (
     <div
       className={`${styles.slot} ${crossing ? styles.crossing : ''} ${dealing ? styles.dealing : ''}`}
-      style={{ '--deal-delay': `${dealDelayMs}ms` } as CSSProperties}
+      style={
+        {
+          '--deal-delay': `${dealDelayMs}ms`,
+          '--upright-ms': `${MOTION.uprightMs}ms`,
+        } as CSSProperties
+      }
     >
       <div className={styles.flip}>
         <div className={`${styles.inner} ${flipped ? styles.revealed : ''}`}>
@@ -54,9 +87,10 @@ export function Card3D({
             <CardBack alt={revealed ? '' : alt} />
           </div>
           <div className={styles.front}>
-            {revealed && urls ? (
-              <CardFace urls={urls} sizes={sizes} alt={alt} reversed={reversed} />
-            ) : null}
+            <div className={styles.orient} style={{ transform: `rotate(${rotation}deg)` }}>
+              {revealed && urls ? <CardFace urls={urls} sizes={sizes} alt={alt} /> : null}
+            </div>
+            {revealed && reversed ? <span className={styles.badge}>{COPY.reversed}</span> : null}
           </div>
         </div>
       </div>
@@ -64,6 +98,18 @@ export function Card3D({
       {!revealed && onReveal ? (
         <button type="button" className={styles.action} onClick={onReveal}>
           {COPY.revealAction}
+        </button>
+      ) : null}
+      {revealed && reversed ? (
+        <button
+          type="button"
+          className={styles.action}
+          onClick={() => {
+            setManual(true);
+            setView((current) => (current === 'readable' ? 'as-dealt' : 'readable'));
+          }}
+        >
+          {view === 'readable' ? COPY.viewAsDealt : COPY.viewReadable}
         </button>
       ) : null}
     </div>

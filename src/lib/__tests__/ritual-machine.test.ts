@@ -78,6 +78,31 @@ describe('ritual machine', () => {
     }
   });
 
+  it('toggles table/page view without changing draws', () => {
+    let state = walkToShuffle();
+    state = reduce(state, { type: 'AUTO_SHUFFLE', operationId: 'op' });
+    state = reduce(state, {
+      type: 'SHUFFLE_COMMITTED',
+      sessionId: state.sessionId,
+      operationId: 'op',
+      deckPreCut: fakeDeck(),
+      commitFull: 'c'.repeat(64),
+      commitShort: 'c'.repeat(16),
+    });
+    state = reduce(state, { type: 'CONFIRM_CUT' });
+    state = reduce(state, { type: 'DEAL_DONE' });
+    state = reduce(state, { type: 'REVEAL_NEXT' });
+    state = reduce(state, { type: 'REVEAL_NEXT' });
+    state = reduce(state, { type: 'REVEAL_NEXT' });
+    expect(state.stage).toBe('read');
+    const draws = state.stage === 'read' ? state.draws : [];
+    state = reduce(state, { type: 'SET_VIEW', view: 'page' });
+    expect(state.stage === 'read' && state.view).toBe('page');
+    expect(state.stage === 'read' && state.draws).toEqual(draws);
+    state = reduce(state, { type: 'SET_VIEW', view: 'table' });
+    expect(state.stage === 'read' && state.view).toBe('table');
+  });
+
   it('abandon confirm starts a new session', () => {
     let state = walkToShuffle();
     const oldId = state.sessionId;

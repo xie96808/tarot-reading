@@ -10,6 +10,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "ingest": "node scripts/ingest-cards.mjs"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -10,10 +10,9 @@ type CardFaceProps = {
   urls: FaceUrls;
   sizes: string;
   alt: string;
-  reversed?: boolean;
 };
 
-export function CardFace({ urls, sizes, alt, reversed }: CardFaceProps) {
+export function CardFace({ urls, sizes, alt }: CardFaceProps) {
   const sources = pictureSources(urls, sizes);
   const [failed, setFailed] = useState(false);
   const [nonce, setNonce] = useState(0);
@@ -39,7 +38,7 @@ export function CardFace({ urls, sizes, alt, reversed }: CardFaceProps) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         key={nonce}
-        className={`${styles.face} ${reversed ? styles.reversed : ''}`}
+        className={styles.face}
         src={sources.jpegSrc}
         srcSet={sources.jpegSrcSet}
         sizes={sizes}
