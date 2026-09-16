@@ -5,6 +5,7 @@ import { CARDS } from '@/data/lexicons/zh-1';
 import type { Draw } from '@/lib/shuffle';
 import type { FaceUrls } from '@/lib/faces';
 import { COPY } from '@/i18n/zh-CN';
+import { dealDelayMs } from '@/lib/motion';
 import { Card3D } from './Card3D';
 import styles from './Tableau.module.css';
 
@@ -15,7 +16,8 @@ type TableauProps = {
   selectedPositionId: string;
   faces: Map<string, FaceUrls>;
   onSelect: (positionId: string) => void;
-  onReveal: (positionId: string) => void;
+  onReveal?: (positionId: string) => void;
+  dealing?: boolean;
 };
 
 export function Tableau({
@@ -26,8 +28,10 @@ export function Tableau({
   faces,
   onSelect,
   onReveal,
+  dealing = false,
 }: TableauProps) {
   const spread = SPREADS[spreadId];
+  const count = spread.positions.length;
   const selected = draws.find((item) => item.positionId === selectedPositionId) ?? draws[0];
   const selectedMeta = spread.positions.find((p) => p.id === selected.positionId)!;
   const selectedRevealed = revealed.includes(selected.positionId);
@@ -44,13 +48,18 @@ export function Tableau({
         sizes="220px"
         reversed={selected.orientation === 'reversed'}
         crossing={selected.positionId === 'challenge'}
+        dealing={dealing}
+        dealDelayMs={dealDelayMs(
+          spread.positions.findIndex((p) => p.id === selected.positionId),
+          count,
+        )}
         alt={
           selectedRevealed
             ? `${CARDS[selected.cardId].nameZh} ${selected.orientation === 'reversed' ? COPY.reversed : COPY.upright}`
             : selectedMeta.nameZh
         }
         label={selectedMeta.nameZh}
-        onReveal={selectedRevealed ? undefined : () => onReveal(selected.positionId)}
+        onReveal={selectedRevealed || !onReveal ? undefined : () => onReveal(selected.positionId)}
       />
       <div className={styles.stepNav}>
         {spread.positions.map((position) => (
@@ -69,7 +78,7 @@ export function Tableau({
 
   if (spreadId === 'celtic') {
     return (
-      <div className={styles.celticWrap}>
+      <div className={`${styles.celticWrap} ${dealing ? styles.dealingBoard : ''}`}>
         {stepped}
         <div className={styles.celtic} role="list">
           {spread.positions.map((position) => {
@@ -93,9 +102,11 @@ export function Tableau({
                   sizes="96px"
                   reversed={draw.orientation === 'reversed'}
                   crossing={position.id === 'challenge'}
+                  dealing={dealing}
+                  dealDelayMs={dealDelayMs(position.drawOrder - 1, count)}
                   alt={isRevealed ? `${CARDS[draw.cardId].nameZh} ${draw.orientation === 'reversed' ? COPY.reversed : COPY.upright}` : position.nameZh}
                   label={position.nameZh}
-                  onReveal={isRevealed ? undefined : () => onReveal(position.id)}
+                  onReveal={isRevealed || !onReveal ? undefined : () => onReveal(position.id)}
                 />
               </div>
             );
@@ -106,7 +117,7 @@ export function Tableau({
   }
 
   return (
-    <div className={styles.row} role="list">
+    <div className={`${styles.row} ${dealing ? styles.dealingBoard : ''}`} role="list">
       {spread.positions.map((position) => {
         const draw = draws.find((item) => item.positionId === position.id)!;
         const isRevealed = revealed.includes(position.id);
@@ -125,13 +136,15 @@ export function Tableau({
               urls={urls}
               sizes="(max-width: 720px) 220px, 170px"
               reversed={draw.orientation === 'reversed'}
+              dealing={dealing}
+              dealDelayMs={dealDelayMs(position.drawOrder - 1, count)}
               alt={
                 isRevealed
                   ? `${CARDS[draw.cardId].nameZh} ${draw.orientation === 'reversed' ? COPY.reversed : COPY.upright}`
                   : position.nameZh
               }
               label={position.nameZh}
-              onReveal={isRevealed ? undefined : () => onReveal(position.id)}
+              onReveal={isRevealed || !onReveal ? undefined : () => onReveal(position.id)}
             />
           </div>
         );

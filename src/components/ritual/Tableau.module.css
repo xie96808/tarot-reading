@@ -67,6 +67,11 @@
   border-color: var(--candle) !important;
 }
 
+.dealingBoard .item,
+.dealingBoard .celticSlot {
+  pointer-events: none;
+}
+
 @media (max-width: 1023px) {
   .celtic {
     display: none;
@@ -77,6 +82,28 @@
   }
 
   .row {
+    display: none;
+  }
+
+  .row.dealingBoard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(72px, 96px));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .row.dealingBoard .item :global(button) {
+    display: none;
+  }
+
+  .celticWrap.dealingBoard .celtic {
+    display: block;
+    height: 420px;
+    transform: scale(0.72);
+    transform-origin: top center;
+  }
+
+  .celticWrap.dealingBoard .step {
     display: none;
   }
 }

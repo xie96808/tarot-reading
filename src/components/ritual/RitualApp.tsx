@@ -13,7 +13,10 @@ import { clearSession, loadSession, pushHistory, saveSession } from '@/lib/stora
 import { loadFaceIndex, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
+import { dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
 import { CardBack } from './CardBack';
+import { ShuffleTable } from './ShuffleTable';
+import { CutTable } from './CutTable';
 import { Tableau } from './Tableau';
 import { ReadingView } from './ReadingView';
 import { HistoryList } from './HistoryList';
@@ -36,6 +39,8 @@ export function RitualApp() {
   const [storageNote, setStorageNote] = useState(false);
   const samples = useRef<PointerSample[]>([]);
   const holding = useRef(false);
+  const [pageHidden, setPageHidden] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   const dispatch = useCallback((event: Parameters<typeof reduce>[1]) => {
     setState((current) => reduce(current, event));
@@ -46,6 +51,16 @@ export function RitualApp() {
     if (restored) setState(restored);
     setHydrated(true);
     loadFaceIndex().then(setFaces).catch(() => undefined);
+    setReducedMotion(prefersReducedMotion());
+    const onVis = () => setPageHidden(document.hidden);
+    const onMotion = () => setReducedMotion(prefersReducedMotion());
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    document.addEventListener('visibilitychange', onVis);
+    motionQuery.addEventListener('change', onMotion);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      motionQuery.removeEventListener('change', onMotion);
+    };
   }, []);
 
   useEffect(() => {
@@ -78,6 +93,14 @@ export function RitualApp() {
   }, [state.stage, dispatch]);
 
   useEffect(() => {
+    if (!pageHidden) return;
+    if (state.stage === 'shuffle' && state.shufflePhase === 'holding') {
+      holding.current = false;
+      dispatch({ type: 'HOLD_CANCEL' });
+    }
+  }, [pageHidden, state, dispatch]);
+
+  useEffect(() => {
     if (state.stage !== 'shuffle' || !('shufflePhase' in state) || state.shufflePhase !== 'committing') {
       return;
     }
@@ -85,8 +108,9 @@ export function RitualApp() {
     const operationId = state.operationId;
     if (!operationId) return;
     let cancelled = false;
-    commitShuffle(samples.current, state.reversals)
-      .then((result) => {
+    const holdMs = shuffleCommitHoldMs(prefersReducedMotion());
+    Promise.all([commitShuffle(samples.current, state.reversals), sleep(holdMs)])
+      .then(([result]) => {
         if (cancelled) return;
         dispatch({
           type: 'SHUFFLE_COMMITTED',
@@ -105,11 +129,11 @@ export function RitualApp() {
   }, [state, dispatch]);
 
   useEffect(() => {
-    if (state.stage !== 'deal') return;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const timer = window.setTimeout(() => dispatch({ type: 'DEAL_DONE' }), reduceMotion ? 0 : 900);
+    if (state.stage !== 'deal' || !('draws' in state)) return;
+    const ms = dealDurationMs(state.draws.length, prefersReducedMotion() || document.hidden);
+    const timer = window.setTimeout(() => dispatch({ type: 'DEAL_DONE' }), ms);
     return () => window.clearTimeout(timer);
-  }, [state.stage, dispatch]);
+  }, [state, dispatch]);
 
   const reading = useMemo(() => {
     if (state.stage !== 'read' && state.stage !== 'close') return null;
@@ -143,7 +167,8 @@ export function RitualApp() {
       ) : null}
 
       {state.stage === 'enter' ? (
-        <section className={styles.center}>
+        <section className={`${styles.center} ${styles.stage}`}>
+          <div className={styles.candle} aria-hidden="true" />
           <h1>{COPY.enterTitle}</h1>
           <p>{COPY.enterBody}</p>
           <button type="button" className={styles.primary} onClick={() => dispatch({ type: 'ACK_ENTER' })}>
@@ -155,7 +180,7 @@ export function RitualApp() {
       ) : null}
 
       {state.stage === 'question' ? (
-        <section className={styles.center}>
+        <section className={`${styles.center} ${styles.stage}`}>
           <h1>{COPY.questionTitle}</h1>
           <p>{COPY.questionHint}</p>
           <textarea
@@ -200,7 +225,7 @@ export function RitualApp() {
       ) : null}
 
       {state.stage === 'spread' ? (
-        <section className={styles.center}>
+        <section className={`${styles.center} ${styles.stage}`}>
           <ul className={styles.spreads}>
             {(Object.keys(SPREADS) as SpreadId[]).map((id) => {
               const spread = SPREADS[id];
@@ -236,10 +261,12 @@ export function RitualApp() {
       ) : null}
 
       {state.stage === 'shuffle' ? (
-        <section className={styles.center}>
+        <section className={`${styles.center} ${styles.stage}`}>
           <h1>{COPY.shuffleTitle}</h1>
-          <div
-            className={styles.pile}
+          <ShuffleTable
+            phase={state.shufflePhase}
+            paused={pageHidden}
+            reduced={reducedMotion}
             onPointerDown={(event) => {
               holding.current = true;
               samples.current = [];
@@ -260,11 +287,7 @@ export function RitualApp() {
               holding.current = false;
               dispatch({ type: 'HOLD_CANCEL' });
             }}
-          >
-            <CardBack />
-            <CardBack />
-            <CardBack />
-          </div>
+          />
           <p>{state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}</p>
           <button
             type="button"
@@ -281,15 +304,17 @@ export function RitualApp() {
       ) : null}
 
       {state.stage === 'cut' ? (
-        <section className={styles.center}>
+        <section className={`${styles.center} ${styles.stage}`}>
           <h1>{COPY.cutTitle}</h1>
           <p>
             {COPY.shuffleSealed} · {state.commitShort}
           </p>
+          <CutTable cutIndex={state.cutIndex} />
           <label>
             {COPY.cutHint(state.cutIndex)}
             <input
               type="range"
+              className={styles.slider}
               min={1}
               max={77}
               step={1}
@@ -327,15 +352,28 @@ export function RitualApp() {
       ) : null}
 
       {state.stage === 'deal' || state.stage === 'reveal' || state.stage === 'read' ? (
-        <section>
+        <section className={styles.stage}>
+          {state.stage === 'deal' ? (
+            <>
+              <p className={styles.dealHint}>牌正在落到桌上</p>
+              <div className={styles.dealSource} aria-hidden="true">
+                <CardBack alt="" />
+              </div>
+            </>
+          ) : null}
           <Tableau
             spreadId={state.spreadId}
             draws={state.draws}
             revealed={state.revealed}
             selectedPositionId={state.selectedPositionId}
             faces={faces}
+            dealing={state.stage === 'deal'}
             onSelect={(positionId) => dispatch({ type: 'SELECT_POSITION', positionId })}
-            onReveal={(positionId) => dispatch({ type: 'REVEAL_POSITION', positionId })}
+            onReveal={
+              state.stage === 'reveal'
+                ? (positionId) => dispatch({ type: 'REVEAL_POSITION', positionId })
+                : undefined
+            }
           />
           {state.stage === 'reveal' ? (
             <div className={styles.center}>
@@ -398,8 +436,8 @@ export function RitualApp() {
       ) : null}
 
       {state.stage === 'close' && reading ? (
-        <section className={styles.center}>
-          <h1>{COPY.closeTitle}</h1>
+        <section className={`${styles.center} ${styles.stage}`}>
+          <h1 className={styles.closeTitle}>{COPY.closeTitle}</h1>
           <p>{COPY.closeBody}</p>
           <ReadingView question={state.receipt.question.trim()} doc={reading} />
           <label className={styles.check}>

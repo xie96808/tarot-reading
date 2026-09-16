@@ -1,0 +1,88 @@
+.table {
+  position: relative;
+  width: min(100%, 340px);
+  height: 268px;
+  margin: 8px auto 12px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.table:active {
+  cursor: grabbing;
+}
+
+.card {
+  position: absolute;
+  width: 118px;
+  left: 50%;
+  top: 48px;
+  margin-left: -59px;
+  transform-origin: 50% 80%;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.42));
+  will-change: transform;
+}
+
+.card img {
+  box-shadow: none;
+}
+
+.table:not(.riffle) .card {
+  transform:
+    translateX(calc(var(--side) * 10px))
+    translateY(calc((var(--i) % 8) * -1.8px))
+    rotate(calc(var(--side) * 4deg + (var(--i) - 8) * 0.35deg));
+  z-index: var(--i);
+}
+
+.riffle .card {
+  animation: riffle 1.2s cubic-bezier(0.45, 0.05, 0.22, 1) infinite;
+  animation-delay: calc((var(--i) % 8) * 75ms);
+  z-index: var(--i);
+}
+
+.sealing .card {
+  animation-duration: 0.95s;
+}
+
+@keyframes riffle {
+  0%,
+  100% {
+    transform:
+      translateX(calc(var(--side) * 78px))
+      translateY(calc((var(--i) % 8) * -2px))
+      rotate(calc(var(--side) * 8deg));
+  }
+  22% {
+    transform:
+      translateX(calc(var(--side) * 28px))
+      translateY(-58px)
+      rotate(calc(var(--side) * 22deg));
+  }
+  48% {
+    transform:
+      translateX(calc(var(--side) * -6px))
+      translateY(calc((var(--i) % 8) * -1.4px - 6px))
+      rotate(calc(var(--side) * -3deg));
+  }
+  72% {
+    transform:
+      translateX(calc(var(--side) * 18px))
+      translateY(-36px)
+      rotate(calc(var(--side) * -12deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .riffle .card,
+  .sealing .card {
+    animation: none;
+  }
+
+  .table .card {
+    transform:
+      translateX(calc(var(--side) * 8px))
+      translateY(calc((var(--i) % 8) * -1.6px))
+      rotate(calc(var(--side) * 3deg));
+  }
+}
