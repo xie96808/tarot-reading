@@ -384,6 +384,11 @@ export function RitualApp() {
           <p>
             {COPY.shuffleSealed} · {state.commitShort}
           </p>
+          <details>
+            <summary>{COPY.sealedFingerprint}</summary>
+            <code style={{ fontSize: 13, wordBreak: 'break-all' }}>{state.commitFull}</code>
+            <p className={styles.muted}>只检查本标签页牌序是否自洽，不是公证。</p>
+          </details>
           <TableScene
             hand={tableHandMode({ stage: 'cut', reduced: reducedMotion })}
             pointer={handPointer}
