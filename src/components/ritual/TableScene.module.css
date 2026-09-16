@@ -1,0 +1,156 @@
+.scene {
+  position: relative;
+  width: min(100%, 920px);
+  margin: 0 auto;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 2px;
+  isolation: isolate;
+  background: #120e0b;
+  box-shadow:
+    0 30px 60px rgba(0, 0, 0, 0.55),
+    inset 0 0 80px rgba(0, 0, 0, 0.35);
+}
+
+.grab {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.grab:active {
+  cursor: grabbing;
+}
+
+.surface,
+.hands {
+  position: absolute;
+  inset: 0;
+}
+
+.surface img,
+.hands img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.surface {
+  z-index: 0;
+  filter: brightness(0.72) saturate(0.92);
+}
+
+.lamp {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 22% 8%, rgba(232, 200, 74, 0.22), transparent 36%),
+    radial-gradient(ellipse at 50% 42%, rgba(244, 236, 213, 0.08), transparent 48%),
+    linear-gradient(180deg, transparent 40%, rgba(8, 6, 4, 0.42));
+}
+
+.felt {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  z-index: 2;
+  width: min(72%, 560px);
+  height: min(58%, 280px);
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: brightness(1.16) contrast(1.04);
+}
+
+.hands {
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0.96;
+  transform: translate(calc(var(--hx, 0) * 14px), calc(var(--hy, 0) * 10px));
+  transition: opacity 280ms ease, transform 180ms linear;
+  mix-blend-mode: normal;
+}
+
+.idle {
+  animation: rest 3.6s ease-in-out infinite;
+}
+
+.riffle {
+  animation: riffleHands 1.2s cubic-bezier(0.45, 0.05, 0.22, 1) infinite;
+}
+
+.cut {
+  animation: cutReach 1.1s ease both;
+}
+
+@keyframes rest {
+  0%,
+  100% {
+    transform: translate(calc(var(--hx, 0) * 14px), calc(8px + var(--hy, 0) * 10px));
+  }
+  50% {
+    transform: translate(calc(var(--hx, 0) * 14px), calc(var(--hy, 0) * 10px));
+  }
+}
+
+@keyframes riffleHands {
+  0%,
+  100% {
+    transform: translate(calc(var(--hx, 0) * 16px), calc(var(--hy, 0) * 12px)) rotate(0deg);
+  }
+  35% {
+    transform: translate(calc(var(--hx, 0) * 16px - 6px), calc(var(--hy, 0) * 12px - 8px)) rotate(-1.4deg);
+  }
+  70% {
+    transform: translate(calc(var(--hx, 0) * 16px + 7px), calc(var(--hy, 0) * 12px - 4px)) rotate(1.6deg);
+  }
+}
+
+@keyframes cutReach {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 0.96;
+    transform: translate(calc(var(--hx, 0) * 10px), calc(var(--hy, 0) * 8px));
+  }
+}
+
+.spread {
+  aspect-ratio: auto;
+  min-height: 560px;
+}
+
+.spread .felt {
+  width: 90%;
+  height: 84%;
+  top: 50%;
+}
+
+@media (max-width: 720px) {
+  .scene {
+    aspect-ratio: 4 / 5;
+  }
+
+  .felt {
+    width: 86%;
+    height: 48%;
+    top: 42%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idle,
+  .riffle,
+  .cut,
+  .hands {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}

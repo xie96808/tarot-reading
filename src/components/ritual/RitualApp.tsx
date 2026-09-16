@@ -14,7 +14,9 @@ import { loadFaceIndex, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
 import { dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
+import { pointerOffset, tableHandMode } from '@/lib/table-hands';
 import { CardBack } from './CardBack';
+import { TableScene } from './TableScene';
 import { ShuffleTable } from './ShuffleTable';
 import { CutTable } from './CutTable';
 import { Tableau } from './Tableau';
@@ -41,6 +43,7 @@ export function RitualApp() {
   const holding = useRef(false);
   const [pageHidden, setPageHidden] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [handPointer, setHandPointer] = useState({ x: 0, y: 0 });
 
   const dispatch = useCallback((event: Parameters<typeof reduce>[1]) => {
     setState((current) => reduce(current, event));
@@ -261,19 +264,25 @@ export function RitualApp() {
       ) : null}
 
       {state.stage === 'shuffle' ? (
-        <section className={`${styles.center} ${styles.stage}`}>
+        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`}>
           <h1>{COPY.shuffleTitle}</h1>
-          <ShuffleTable
-            phase={state.shufflePhase}
-            paused={pageHidden}
-            reduced={reducedMotion}
+          <TableScene
+            hand={tableHandMode({
+              stage: 'shuffle',
+              shufflePhase: state.shufflePhase,
+              reduced: reducedMotion || pageHidden,
+            })}
+            pointer={handPointer}
+            label={state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}
             onPointerDown={(event) => {
               holding.current = true;
               samples.current = [];
               (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+              setHandPointer(pointerOffset(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect()));
               dispatch({ type: 'HOLD_START', operationId: newOperationId() });
             }}
             onPointerMove={(event) => {
+              setHandPointer(pointerOffset(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect()));
               if (!holding.current) return;
               samples.current.push({ x: event.clientX, y: event.clientY, t: performance.now() });
               dispatch({ type: 'HOLD_SAMPLE' });
@@ -287,7 +296,9 @@ export function RitualApp() {
               holding.current = false;
               dispatch({ type: 'HOLD_CANCEL' });
             }}
-          />
+          >
+            <ShuffleTable phase={state.shufflePhase} paused={pageHidden} reduced={reducedMotion} />
+          </TableScene>
           <p>{state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}</p>
           <button
             type="button"
@@ -304,12 +315,18 @@ export function RitualApp() {
       ) : null}
 
       {state.stage === 'cut' ? (
-        <section className={`${styles.center} ${styles.stage}`}>
+        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`}>
           <h1>{COPY.cutTitle}</h1>
           <p>
             {COPY.shuffleSealed} · {state.commitShort}
           </p>
-          <CutTable cutIndex={state.cutIndex} />
+          <TableScene
+            hand={tableHandMode({ stage: 'cut', reduced: reducedMotion })}
+            pointer={handPointer}
+            label={COPY.cutTitle}
+          >
+            <CutTable cutIndex={state.cutIndex} />
+          </TableScene>
           <label>
             {COPY.cutHint(state.cutIndex)}
             <input
@@ -352,30 +369,33 @@ export function RitualApp() {
       ) : null}
 
       {state.stage === 'deal' || state.stage === 'reveal' || state.stage === 'read' ? (
-        <section className={styles.stage}>
-          {state.stage === 'deal' ? (
-            <>
-              <p className={styles.dealHint}>牌正在落到桌上</p>
-              <div className={styles.dealSource} aria-hidden="true">
-                <CardBack alt="" />
-              </div>
-            </>
-          ) : null}
+        <section className={`${styles.stage} ${styles.tableStage}`}>
+          {state.stage === 'deal' ? <p className={styles.dealHint}>牌正在落到桌上</p> : null}
           <div className={state.stage === 'read' && state.view === 'page' ? styles.tableParked : undefined}>
-            <Tableau
-              spreadId={state.spreadId}
-              draws={state.draws}
-              revealed={state.revealed}
-              selectedPositionId={state.selectedPositionId}
-              faces={faces}
-              dealing={state.stage === 'deal'}
-              onSelect={(positionId) => dispatch({ type: 'SELECT_POSITION', positionId })}
-              onReveal={
-                state.stage === 'reveal'
-                  ? (positionId) => dispatch({ type: 'REVEAL_POSITION', positionId })
-                  : undefined
-              }
-            />
+            <TableScene
+              hand={tableHandMode({ stage: state.stage, reduced: reducedMotion })}
+              layout="spread"
+            >
+              {state.stage === 'deal' ? (
+                <div className={styles.dealSource} aria-hidden="true">
+                  <CardBack alt="" />
+                </div>
+              ) : null}
+              <Tableau
+                spreadId={state.spreadId}
+                draws={state.draws}
+                revealed={state.revealed}
+                selectedPositionId={state.selectedPositionId}
+                faces={faces}
+                dealing={state.stage === 'deal'}
+                onSelect={(positionId) => dispatch({ type: 'SELECT_POSITION', positionId })}
+                onReveal={
+                  state.stage === 'reveal'
+                    ? (positionId) => dispatch({ type: 'REVEAL_POSITION', positionId })
+                    : undefined
+                }
+              />
+            </TableScene>
           </div>
           {state.stage === 'reveal' ? (
             <div className={styles.center}>

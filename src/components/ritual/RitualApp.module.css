@@ -12,6 +12,14 @@
   text-align: center;
 }
 
+.tableStage {
+  max-width: 960px;
+}
+
+.center.tableStage {
+  max-width: 960px;
+}
+
 .center {
   max-width: 560px;
   margin: 0 auto;
@@ -217,8 +225,12 @@
 }
 
 .dealSource {
+  position: absolute;
+  left: 50%;
+  top: 8%;
   width: 72px;
-  margin: 0 auto 12px;
+  margin-left: -36px;
+  z-index: 3;
   animation: sourceToss 1.8s ease both;
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.4));
 }
