@@ -22,6 +22,7 @@ import { CutTable } from './CutTable';
 import { Tableau } from './Tableau';
 import { ReadingView } from './ReadingView';
 import { HistoryList } from './HistoryList';
+import { ConfirmModal } from './ConfirmModal';
 import styles from './RitualApp.module.css';
 
 function chapter(stage: RitualSession['stage']): string {
@@ -151,14 +152,25 @@ export function RitualApp() {
     return composeReading(spreadId, draws, CARDS);
   }, [state]);
 
+  useEffect(() => {
+    document.getElementById('stage-title')?.focus();
+  }, [state.stage]);
+
   if (!hydrated) return <main className={styles.shell} />;
 
   return (
     <main className={styles.shell}>
-      <p className={styles.chapter}>{chapter(state.stage)}</p>
+      <h2 id="stage-title" className={styles.chapter} tabIndex={-1}>
+        {chapter(state.stage)}
+      </h2>
+      <p className="visually-hidden" aria-live="polite">
+        {state.stage === 'reveal' && 'revealed' in state
+          ? `已翻开 ${state.revealed.length} / ${state.draws.length}`
+          : chapter(state.stage)}
+      </p>
       {storageNote ? <p className={styles.warn}>{COPY.storageFallback}</p> : null}
       {state.abandonOpen ? (
-        <div className={styles.modal} role="dialog" aria-modal="true">
+        <ConfirmModal onCancel={() => dispatch({ type: 'ABANDON_CANCEL' })}>
           <p>{COPY.abandonConfirm}</p>
           <button type="button" onClick={() => dispatch({ type: 'ABANDON_CONFIRM' })}>
             确定放弃
@@ -166,10 +178,10 @@ export function RitualApp() {
           <button type="button" onClick={() => dispatch({ type: 'ABANDON_CANCEL' })}>
             继续这一局
           </button>
-        </div>
+        </ConfirmModal>
       ) : null}
       {restartAsk ? (
-        <div className={styles.modal} role="dialog" aria-modal="true">
+        <ConfirmModal onCancel={() => setRestartAsk(false)}>
           <p>{COPY.resumeRestartConfirm}</p>
           <button
             type="button"
@@ -184,7 +196,7 @@ export function RitualApp() {
           <button type="button" onClick={() => setRestartAsk(false)}>
             {COPY.resumeContinue}
           </button>
-        </div>
+        </ConfirmModal>
       ) : null}
       {state.stage !== 'enter' && state.stage !== 'close' ? (
         <button type="button" className={styles.abandon} onClick={() => dispatch({ type: 'ABANDON_REQUEST' })}>

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/config/site';
 import { Header } from '@/components/chrome/Header';
 import { Footer } from '@/components/chrome/Footer';
+import { SkipLink } from '@/components/chrome/SkipLink';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
@@ -20,8 +21,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="zh-CN">
       <body>
+        <SkipLink />
         <Header />
-        {children}
+        <div id="main">{children}</div>
         <Footer />
       </body>
     </html>
