@@ -26,6 +26,13 @@ export type ReadingPayloadV1 = {
 
 const COMMIT_RE = /^[0-9a-f]{16}$/;
 
+export const SUPPORTED_VERSIONS = {
+  protocol: [1],
+  deck: ['rws-1'],
+  lexicon: ['zh-1'],
+  algo: ['fy-hkdf-2'],
+} as const;
+
 function codepoints(value: string): number {
   return [...value].length;
 }
@@ -125,10 +132,10 @@ function parsePayload(raw: unknown): ReadingPayloadV1 | null {
     'ts',
   ];
   if (Object.keys(obj).some((key) => !allowed.includes(key))) return null;
-  if (obj.v !== 1) return null;
-  if (obj.deckVersion !== DECK_VERSION) return null;
-  if (obj.lexiconVersion !== LEXICON_VERSION) return null;
-  if (obj.algo !== ALGO_ID) return null;
+  if (!SUPPORTED_VERSIONS.protocol.includes(obj.v as 1)) return null;
+  if (!SUPPORTED_VERSIONS.deck.includes(obj.deckVersion as 'rws-1')) return null;
+  if (!SUPPORTED_VERSIONS.lexicon.includes(obj.lexiconVersion as 'zh-1')) return null;
+  if (!SUPPORTED_VERSIONS.algo.includes(obj.algo as 'fy-hkdf-2')) return null;
   if (!isSpreadId(obj.spreadId)) return null;
   if (!(obj.q === null || (typeof obj.q === 'string' && codepoints(obj.q) <= MAX_QUESTION_CODEPOINTS))) {
     return null;

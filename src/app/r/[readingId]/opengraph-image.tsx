@@ -1,8 +1,8 @@
 import { ImageResponse } from 'next/og';
 import { decodeReading } from '@/lib/reading-codec';
-import { CARDS } from '@/data/lexicons/zh-1';
 import { SPREADS } from '@/data/lexicons/zh-1/spreads';
 import { SITE_NAME } from '@/config/site';
+import { shareOgLines } from '@/lib/share-meta';
 
 export const runtime = 'nodejs';
 export const size = { width: 1200, height: 630 };
@@ -12,12 +12,7 @@ export default async function OgImage({ params }: { params: Promise<{ readingId:
   const { readingId } = await params;
   const decoded = decodeReading(decodeURIComponent(readingId));
   const title = decoded.ok ? SPREADS[decoded.payload.spreadId].nameZh : '本局记录';
-  const lines = decoded.ok
-    ? decoded.payload.draws.map((draw) => {
-        const card = CARDS[draw.cardId];
-        return `${card.nameZh} ${draw.orientation === 'reversed' ? '逆位' : '正位'}`;
-      })
-    : ['记录无法显示'];
+  const lines = shareOgLines(decoded.ok ? decoded.payload : null);
   return new ImageResponse(
     (
       <div

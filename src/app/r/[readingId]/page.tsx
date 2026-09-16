@@ -5,6 +5,7 @@ import { composeReading } from '@/lib/reading';
 import { CARDS } from '@/data/lexicons/zh-1';
 import { SPREADS } from '@/data/lexicons/zh-1/spreads';
 import { COPY } from '@/i18n/zh-CN';
+import { sharePageMeta } from '@/lib/share-meta';
 import { ReadingView } from '@/components/ritual/ReadingView';
 
 export const dynamic = 'force-dynamic';
@@ -17,13 +18,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!decoded.ok) {
     return { title: '本局记录', robots: { index: false, follow: false } };
   }
-  const spread = SPREADS[decoded.payload.spreadId];
-  const names = decoded.payload.draws
-    .map((draw) => `${CARDS[draw.cardId].nameZh}${draw.orientation === 'reversed' ? '逆' : '正'}`)
-    .join(' · ');
+  const meta = sharePageMeta(decoded.payload);
   return {
-    title: `本局记录 · ${spread.nameZh}`,
-    description: names,
+    title: meta.title,
+    description: meta.description,
     robots: { index: false, follow: false },
   };
 }
