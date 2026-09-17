@@ -162,6 +162,17 @@
   gap: 12px;
 }
 
+.modal button {
+  min-height: 48px;
+  background: transparent;
+  color: var(--parchment);
+  border: 1px solid rgba(196, 163, 90, 0.35);
+}
+
+.modal button:first-of-type {
+  border-color: var(--candle);
+}
+
 .shareBox {
   min-height: 80px;
   font-size: 13px;

@@ -36,3 +36,29 @@ for (const spreadId of ['single', 'three', 'celtic'] as SpreadId[]) {
     await page.screenshot({ path: testInfo.outputPath(`reading-${spreadId}.png`), fullPage: true });
   });
 }
+
+test('copy-share button generates a working link and persists device history', async ({ page }) => {
+  await page.goto('/read');
+  await page.getByRole('button', { name: '我准备好了' }).click();
+  await page.getByRole('button', { name: '这次不设问题' }).click();
+  await page.getByRole('button', { name: '开始洗牌' }).click();
+  await page.getByRole('button', { name: '为我洗牌' }).click();
+  await expect(page.getByRole('button', { name: '让牌落在桌上' })).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: '让牌落在桌上' }).click();
+  const revealNext = page.locator('main').getByRole('button', { name: '翻开这一张' }).last();
+  await expect(revealNext).toBeVisible({ timeout: 8_000 });
+  await revealNext.click();
+  await revealNext.click();
+  await revealNext.click();
+  await expect(page.getByRole('heading', { name: '整阵线索' })).toBeVisible();
+  await page.getByRole('checkbox', { name: '保存到这台设备' }).check();
+  await page.getByRole('button', { name: '写一句，留给自己' }).click();
+  await page.getByRole('button', { name: '复制本局链接' }).click();
+  const shareBox = page.getByRole('textbox');
+  await expect(shareBox).toHaveValue(/\/r\/1\./, { timeout: 5_000 });
+  const shareUrl = await shareBox.inputValue();
+  await page.goto(shareUrl);
+  await expect(page.getByRole('heading', { name: '整阵线索' })).toBeVisible();
+  await page.goto('/read');
+  await expect(page.getByText('仅这台设备上的记录')).toBeVisible();
+});

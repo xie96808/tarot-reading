@@ -57,8 +57,9 @@ function canonicalPayload(payload: ReadingPayloadV1): ReadingPayloadV1 {
   };
 }
 
+// 只用 Web 标准编解码：Next 注入的浏览器端 Buffer 填充不支持 base64url，
+// 而 btoa/atob/TextEncoder/TextDecoder 在 Node 20 与浏览器中行为一致。
 function toBase64Url(json: string): string {
-  if (typeof Buffer !== 'undefined') return Buffer.from(json, 'utf8').toString('base64url');
   const bytes = new TextEncoder().encode(json);
   let binary = '';
   bytes.forEach((byte) => {
@@ -68,7 +69,6 @@ function toBase64Url(json: string): string {
 }
 
 function fromBase64Url(body: string): string {
-  if (typeof Buffer !== 'undefined') return Buffer.from(body, 'base64url').toString('utf8');
   const padded = body.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((body.length + 3) % 4);
   const binary = atob(padded);
   const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
