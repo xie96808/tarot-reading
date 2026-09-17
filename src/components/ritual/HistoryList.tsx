@@ -1,17 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { encodeReading } from '@/lib/reading-codec';
-import { clearHistory, loadHistory, removeHistory, type HistoryEntry } from '@/lib/storage';
+import { clearHistory, removeHistory, parseHistory, historySnapshot, serverHistorySnapshot, subscribeHistory } from '@/lib/storage';
 import { SPREADS } from '@/data/lexicons/zh-1/spreads';
 import styles from './HistoryList.module.css';
 
 export function HistoryList() {
-  const [items, setItems] = useState<HistoryEntry[]>([]);
-  useEffect(() => {
-    setItems(loadHistory());
-  }, []);
+  const raw = useSyncExternalStore(subscribeHistory, historySnapshot, serverHistorySnapshot);
+  const items = useMemo(() => parseHistory(raw), [raw]);
   if (items.length === 0) return null;
   return (
     <section className={styles.wrap}>
@@ -40,14 +38,14 @@ export function HistoryList() {
             <li key={item.receipt.sessionId}>
               <span>{SPREADS[item.receipt.spreadId].nameZh}</span>
               {href ? <Link href={href}>打开</Link> : <span>无法分享</span>}
-              <button type="button" onClick={() => setItems(removeHistory(item.receipt.sessionId))}>
+              <button type="button" onClick={() => removeHistory(item.receipt.sessionId)}>
                 删除
               </button>
             </li>
           );
         })}
       </ul>
-      <button type="button" onClick={() => { clearHistory(); setItems([]); }}>
+      <button type="button" onClick={() => { clearHistory(); }}>
         清空全部
       </button>
     </section>

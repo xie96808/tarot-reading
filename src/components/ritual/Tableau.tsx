@@ -43,6 +43,7 @@ export function Tableau({
         {spread.positions.length}
       </p>
       <Card3D
+        key={`${selected.positionId}:${selected.cardId}`}
         revealed={selectedRevealed}
         urls={selectedRevealed ? faces.get(selected.cardId) : undefined}
         sizes="220px"

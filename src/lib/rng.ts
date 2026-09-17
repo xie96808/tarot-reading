@@ -33,11 +33,9 @@ export async function createHkdfRng(
   let counter = 0;
   let pool = new DataView(new ArrayBuffer(0));
   let offset = 0;
-  let cancelled = false;
 
   return {
     async nextUint32() {
-      if (cancelled) throw new Error('rng cancelled');
       if (offset === pool.byteLength) {
         const info = encoder.encode(`tarot/fy-hkdf-2/${purpose}/block/${counter++}`);
         const bits = await subtle.deriveBits(

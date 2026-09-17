@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { COPY } from '@/i18n/zh-CN';
 import { SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
@@ -9,7 +9,7 @@ import { composeReading } from '@/lib/reading';
 import { encodeReading } from '@/lib/reading-codec';
 import { commitShuffle, newOperationId, randomCutIndex } from '@/lib/ritual-effects';
 import { canResume, createSession, persistable, reduce, type RitualSession } from '@/lib/ritual-machine';
-import { clearSession, loadSession, pushHistory, saveSession } from '@/lib/storage';
+import { clearSession, loadSession, pushHistory, saveSession, subscribeStorageStatus, storageStatusSnapshot, serverStorageStatusSnapshot } from '@/lib/storage';
 import { loadFaceIndex, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
@@ -24,6 +24,7 @@ import { ReadingView } from './ReadingView';
 import { HistoryList } from './HistoryList';
 import { ConfirmModal } from './ConfirmModal';
 import styles from './RitualApp.module.css';
+import { useClientReady, usePageHidden, useReducedMotion } from '@/lib/browser-state';
 
 function chapter(stage: RitualSession['stage']): string {
   if (stage === 'enter') return '入席';
@@ -34,17 +35,24 @@ function chapter(stage: RitualSession['stage']): string {
 }
 
 export function RitualApp() {
+  const ready = useClientReady();
+  return ready ? <RitualClient /> : <main className={styles.shell} />;
+}
+
+function RitualClient() {
   const [state, setState] = useState<RitualSession>(() => createSession());
-  const [hydrated, setHydrated] = useState(false);
   const [faces, setFaces] = useState<Map<string, FaceUrls>>(new Map());
   const [shareUrl, setShareUrl] = useState('');
   const [includeQuestion, setIncludeQuestion] = useState(false);
-  const [storageNote, setStorageNote] = useState(false);
+  const storageNote = useSyncExternalStore(subscribeStorageStatus, storageStatusSnapshot, serverStorageStatusSnapshot);
   const samples = useRef<PointerSample[]>([]);
   const holding = useRef(false);
-  const [pageHidden, setPageHidden] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
-  const [pendingResume, setPendingResume] = useState<RitualSession | null>(null);
+  const pageHidden = usePageHidden();
+  const reducedMotion = useReducedMotion();
+  const [pendingResume, setPendingResume] = useState<RitualSession | null>(() => {
+    const restored = loadSession();
+    return canResume(restored) ? persistable(restored) : null;
+  });
   const [restartAsk, setRestartAsk] = useState(false);
 
   const dispatch = useCallback((event: Parameters<typeof reduce>[1]) => {
@@ -52,30 +60,15 @@ export function RitualApp() {
   }, []);
 
   useEffect(() => {
-    const restored = loadSession();
-    if (canResume(restored)) {
-      setPendingResume(persistable(restored));
-    }
-    setHydrated(true);
-    loadFaceIndex().then(setFaces).catch(() => undefined);
-    setReducedMotion(prefersReducedMotion());
-    const onVis = () => setPageHidden(document.hidden);
-    const onMotion = () => setReducedMotion(prefersReducedMotion());
-    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    document.addEventListener('visibilitychange', onVis);
-    motionQuery.addEventListener('change', onMotion);
-    return () => {
-      document.removeEventListener('visibilitychange', onVis);
-      motionQuery.removeEventListener('change', onMotion);
-    };
+    let cancelled = false;
+    loadFaceIndex().then((index) => { if (!cancelled) setFaces(index); }).catch(() => undefined);
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
     if (pendingResume && state.stage === 'enter') return;
-    const result = saveSession(persistable(state));
-    if (result === 'memory') setStorageNote(true);
-  }, [state, hydrated, pendingResume]);
+    saveSession(persistable(state));
+  }, [state, pendingResume]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -101,12 +94,14 @@ export function RitualApp() {
   }, [state.stage, dispatch]);
 
   useEffect(() => {
-    if (!pageHidden) return;
-    if (state.stage === 'shuffle' && state.shufflePhase === 'holding') {
+    const cancelHiddenHold = () => {
+      if (!document.hidden) return;
       holding.current = false;
       dispatch({ type: 'HOLD_CANCEL' });
-    }
-  }, [pageHidden, state, dispatch]);
+    };
+    document.addEventListener('visibilitychange', cancelHiddenHold);
+    return () => document.removeEventListener('visibilitychange', cancelHiddenHold);
+  }, [dispatch]);
 
   useEffect(() => {
     if (state.stage !== 'shuffle' || !('shufflePhase' in state) || state.shufflePhase !== 'committing') {
@@ -154,8 +149,6 @@ export function RitualApp() {
   useEffect(() => {
     document.getElementById('stage-title')?.focus();
   }, [state.stage]);
-
-  if (!hydrated) return <main className={styles.shell} />;
 
   return (
     <main className={styles.shell}>

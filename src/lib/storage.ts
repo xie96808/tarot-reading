@@ -8,7 +8,43 @@ export type HistoryEntry = {
   savedAt: number;
 };
 
-type MemoryStore = Map<string, string>;
+const historyListeners = new Set<() => void>();
+const statusListeners = new Set<() => void>();
+let storageFallback = false;
+
+export function subscribeStorageStatus(listener: () => void): () => void {
+  statusListeners.add(listener);
+  return () => { statusListeners.delete(listener); };
+}
+
+export const storageStatusSnapshot = () => storageFallback;
+export const serverStorageStatusSnapshot = () => false;
+export const historySnapshot = () => readStore('local', HISTORY_STORAGE_KEY);
+export const serverHistorySnapshot = () => null;
+
+export function subscribeHistory(listener: () => void): () => void {
+  historyListeners.add(listener);
+  const onStorage = (event: StorageEvent) => {
+    try {
+      if (event.storageArea === window.localStorage && (event.key === HISTORY_STORAGE_KEY || event.key === null)) listener();
+    } catch { /* Storage is disabled; same-tab memory notifications still work. */ }
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    historyListeners.delete(listener);
+    window.removeEventListener('storage', onStorage);
+  };
+}
+
+function notifyWrite(kind: 'session' | 'local', key: string, fallback: boolean) {
+  if (fallback && !storageFallback) {
+    storageFallback = true;
+    statusListeners.forEach((listener) => listener());
+  }
+  if (kind === 'local' && key === HISTORY_STORAGE_KEY) historyListeners.forEach((listener) => listener());
+}
+
+type MemoryStore = Map<string, string | null>;
 
 function memory(): MemoryStore {
   const g = globalThis as typeof globalThis & { __tarotMemory?: MemoryStore };
@@ -17,6 +53,8 @@ function memory(): MemoryStore {
 }
 
 function readStore(kind: 'session' | 'local', key: string): string | null {
+  const memKey = `${kind}:${key}`;
+  if (memory().has(memKey)) return memory().get(memKey) ?? null;
   try {
     const store = kind === 'session' ? globalThis.sessionStorage : globalThis.localStorage;
     if (store) return store.getItem(key);
@@ -32,6 +70,8 @@ function writeStore(kind: 'session' | 'local', key: string, value: string | null
     if (store) {
       if (value === null) store.removeItem(key);
       else store.setItem(key, value);
+      memory().delete(`${kind}:${key}`);
+      notifyWrite(kind, key, false);
       return 'ok';
     }
   } catch {
@@ -39,8 +79,8 @@ function writeStore(kind: 'session' | 'local', key: string, value: string | null
   }
   const mem = memory();
   const memKey = `${kind}:${key}`;
-  if (value === null) mem.delete(memKey);
-  else mem.set(memKey, value);
+  mem.set(memKey, value);
+  notifyWrite(kind, key, true);
   return 'memory';
 }
 
@@ -65,7 +105,10 @@ export function clearSession(): void {
 }
 
 export function loadHistory(): HistoryEntry[] {
-  const raw = readStore('local', HISTORY_STORAGE_KEY);
+  return parseHistory(historySnapshot());
+}
+
+export function parseHistory(raw: string | null): HistoryEntry[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as HistoryEntry[];

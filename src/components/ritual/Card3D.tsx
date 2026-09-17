@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { FaceUrls } from '@/lib/faces';
 import { COPY } from '@/i18n/zh-CN';
 import { autoUprightDelayMs, MOTION, prefersReducedMotion } from '@/lib/motion';
@@ -34,38 +34,29 @@ export function Card3D({
   dealDelayMs = 0,
   dealing = false,
 }: Card3DProps) {
-  const startedRevealed = useRef(revealed);
-  const manualRef = useRef(false);
-  const [flipped, setFlipped] = useState(revealed);
-  const [view, setView] = useState<FaceView>(revealed && reversed ? 'readable' : 'as-dealt');
-  const [manual, setManual] = useState(false);
+  const [presentation, setPresentation] = useState({
+    revealed,
+    flipped: revealed,
+    view: (revealed && reversed ? 'readable' : 'as-dealt') as FaceView,
+    manual: false,
+  });
+
+  // Reset on the prop transition during render, before children commit stale state.
+  if (presentation.revealed !== revealed) {
+    setPresentation({ revealed, flipped: false, view: 'as-dealt', manual: false });
+  }
+  const { flipped, view } = presentation;
 
   useEffect(() => {
-    manualRef.current = manual;
-  }, [manual]);
-
-  useEffect(() => {
-    if (!revealed) {
-      startedRevealed.current = false;
-      manualRef.current = false;
-      setFlipped(false);
-      setView('as-dealt');
-      setManual(false);
-      return;
-    }
-    if (startedRevealed.current) return;
-    startedRevealed.current = true;
-    const frame = requestAnimationFrame(() => setFlipped(true));
+    if (!revealed) return;
+    const frame = requestAnimationFrame(() => setPresentation((current) => ({ ...current, flipped: true })));
     const delay = autoUprightDelayMs(reversed, prefersReducedMotion());
-    const timer =
-      delay === null
-        ? undefined
-        : window.setTimeout(() => {
-            if (!manualRef.current) setView('readable');
-          }, delay);
+    const timer = delay === null ? undefined : window.setTimeout(() => {
+      setPresentation((current) => current.manual ? current : { ...current, view: 'readable' });
+    }, delay);
     return () => {
       cancelAnimationFrame(frame);
-      if (timer) window.clearTimeout(timer);
+      if (timer !== undefined) window.clearTimeout(timer);
     };
   }, [revealed, reversed]);
 
@@ -106,8 +97,7 @@ export function Card3D({
           type="button"
           className={styles.action}
           onClick={() => {
-            setManual(true);
-            setView((current) => (current === 'readable' ? 'as-dealt' : 'readable'));
+            setPresentation((current) => ({ ...current, manual: true, view: current.view === 'readable' ? 'as-dealt' : 'readable' }));
           }}
         >
           {view === 'readable' ? COPY.viewAsDealt : COPY.viewReadable}

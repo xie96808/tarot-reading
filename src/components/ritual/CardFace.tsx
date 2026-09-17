@@ -35,7 +35,6 @@ export function CardFace({ urls, sizes, alt }: CardFaceProps) {
   return (
     <picture>
       <source type="image/webp" srcSet={sources.webpSrcSet} sizes={sizes} />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         key={nonce}
         className={styles.face}

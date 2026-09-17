@@ -39,7 +39,6 @@ export function CardFaceStatic({
         srcSet={`${variants[320].webp} 320w, ${variants[480].webp} 480w, ${variants[800].webp} 800w`}
         sizes={sizes}
       />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={variants[320].jpeg}
         srcSet={`${variants[320].jpeg} 320w, ${variants[480].jpeg} 480w, ${variants[800].jpeg} 800w`}
