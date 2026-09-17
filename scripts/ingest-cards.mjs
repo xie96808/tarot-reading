@@ -132,8 +132,10 @@ async function main() {
   }
   await rename(tmpDeck, finalDeck);
   await cp(path.join(TMP_ROOT, 'back.svg'), path.join(OUT_ROOT, 'back.svg'));
+  const generatedManifest = path.join(ROOT, 'src/data/decks/rws-1/manifest.generated.ts');
+  await mkdir(path.dirname(generatedManifest), { recursive: true });
   await writeFile(
-    path.join(ROOT, 'src/data/decks/rws-1/manifest.generated.ts'),
+    generatedManifest,
     `export const DECK_MANIFEST = ${JSON.stringify(manifest)} as const;\n`,
   );
   await rm(TMP_ROOT, { recursive: true, force: true });
