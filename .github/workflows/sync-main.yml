@@ -1,0 +1,32 @@
+name: Sync main source to Aliyun
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aliyun-source-main
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out the pushed commit
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - name: Send committed source into a revision directory
+        env:
+          SYNC_HOST: ${{ vars.ALIYUN_SYNC_HOST }}
+          SYNC_USER: ${{ vars.ALIYUN_SYNC_USER }}
+          SYNC_PORT: ${{ vars.ALIYUN_SYNC_PORT }}
+          SYNC_PRIVATE_KEY: ${{ secrets.ALIYUN_SYNC_SSH_KEY }}
+          SYNC_KNOWN_HOSTS: ${{ secrets.ALIYUN_SYNC_KNOWN_HOSTS }}
+        run: bash deploy/sync-source.sh
