@@ -22,6 +22,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: meta.title,
     description: meta.description,
+    openGraph: { title: meta.title, description: meta.description },
+    twitter: { card: 'summary_large_image', title: meta.title, description: meta.description,
+      images: [{ url: `/r/${encodeURIComponent(readingId)}/opengraph-image`, alt: meta.description }] },
     robots: { index: false, follow: false },
   };
 }

@@ -1,5 +1,10 @@
 .page {
-  background: var(--parchment);
+  position: relative;
+  background-color: var(--parchment);
+  background-image: linear-gradient(to bottom, transparent, var(--parchment) 240px), url('/share/parchment-strip.jpg');
+  background-size: 100% 260px, auto 260px;
+  background-repeat: no-repeat;
+  background-position: top center;
   color: var(--frame);
   padding: 32px 28px 48px;
   max-width: 720px;
@@ -58,4 +63,22 @@
 .page summary {
   cursor: pointer;
   color: #7a2e24;
+}
+
+.page::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: 24px;
+  width: 24px;
+  height: 67px;
+  background: url('/ui/bookmark.png') center / contain no-repeat;
+  pointer-events: none;
+}
+
+.question { padding-right: 32px; overflow-wrap: anywhere; }
+
+@media (max-width: 720px) {
+  .page { padding: 28px 20px 36px; }
+  .page::before { right: 16px; width: 18px; height: 50px; }
 }

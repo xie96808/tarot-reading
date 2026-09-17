@@ -82,6 +82,7 @@ export function Card3D({
       }
     >
       <div className={styles.flip}>
+        <span className={`${styles.glow} ${flipped ? styles.glowing : ''}`} aria-hidden="true" />
         <div className={`${styles.inner} ${flipped ? styles.revealed : ''}`}>
           <div className={styles.back}>
             <CardBack alt={revealed ? '' : alt} />

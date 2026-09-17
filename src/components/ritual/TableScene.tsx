@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties, PointerEventHandler, ReactNode } from 'react';
+import type { PointerEventHandler, ReactNode } from 'react';
 import type { TableHandMode } from '@/lib/table-hands';
 import styles from './TableScene.module.css';
 
@@ -24,59 +24,64 @@ const HAND_SRC: Record<Exclude<TableHandMode, 'none'>, { webp: string; jpeg: str
 
 type TableSceneProps = {
   hand: TableHandMode;
-  pointer?: { x: number; y: number };
   children: ReactNode;
   onPointerDown?: PointerEventHandler<HTMLDivElement>;
   onPointerMove?: PointerEventHandler<HTMLDivElement>;
   onPointerUp?: PointerEventHandler<HTMLDivElement>;
   onPointerCancel?: PointerEventHandler<HTMLDivElement>;
   label?: string;
+  feedbackLabel?: string;
   layout?: 'play' | 'spread';
 };
 
 export function TableScene({
   hand,
-  pointer = { x: 0, y: 0 },
   children,
   onPointerDown,
   onPointerMove,
   onPointerUp,
   onPointerCancel,
   label,
+  feedbackLabel = '查看牌堆示意',
   layout = 'play',
 }: TableSceneProps) {
   const interactive = Boolean(onPointerDown);
   const src = hand === 'none' ? null : HAND_SRC[hand];
+  const photograph = (
+    <picture className={styles.surface}>
+      <source type="image/webp" srcSet={src?.webp ?? '/table/surface.webp'} />
+      <img src={src?.jpeg ?? '/table/surface.jpg'} alt="" width={1600} height={900} draggable={false} />
+    </picture>
+  );
+
+  if (layout === 'spread') {
+    return (
+      <div className={`${styles.scene} ${styles.spread}`} data-table-scene="spread">
+        {photograph}
+        <div className={styles.felt}>{children}</div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`${styles.scene} ${interactive ? styles.grab : ''} ${layout === 'spread' ? styles.spread : ''}`}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
-      role={interactive ? 'img' : undefined}
-      aria-label={label}
-      style={
-        {
-          '--hx': String(pointer.x),
-          '--hy': String(pointer.y),
-        } as CSSProperties
-      }
-    >
-      <picture className={styles.surface}>
-        <source type="image/webp" srcSet="/table/surface.webp" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/table/surface.jpg" alt="" width={1600} height={900} />
-      </picture>
-      <div className={styles.lamp} aria-hidden="true" />
-      <div className={styles.felt}>{children}</div>
-      {src ? (
-        <picture className={`${styles.hands} ${styles[hand]}`}>
-          <source type="image/webp" srcSet={src.webp} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src.jpeg} alt={src.alt} width={1600} height={900} />
-        </picture>
-      ) : null}
+    <div className={styles.wrap}>
+      <div
+        className={`${styles.scene} ${styles.photo} ${interactive ? styles.grab : ''}`}
+        data-table-scene="photo"
+        data-hand={hand}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        role="img"
+        aria-label={label}
+      >
+        {photograph}
+      </div>
+      <details className={styles.feedback}>
+        <summary>{feedbackLabel}</summary>
+        <div className={styles.diagram}>{children}</div>
+      </details>
     </div>
   );
 }

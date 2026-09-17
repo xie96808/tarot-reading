@@ -13,6 +13,16 @@ export const metadata: Metadata = {
     template: `%s · ${SITE_NAME}`,
   },
   description: `${SITE_NAME}。${SITE_TAGLINE} 给此刻留一盏灯，用一副牌把问题慢慢看清。`,
+  openGraph: {
+    type: 'website',
+    locale: 'zh_CN',
+    siteName: SITE_NAME,
+    images: [{ url: '/og/og-cover.jpg', width: 1200, height: 630, alt: `${SITE_NAME} · 桌边的一盏灯` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: [{ url: '/og/og-cover.jpg', alt: `${SITE_NAME} · 桌边的一盏灯` }],
+  },
   referrer: 'no-referrer',
   robots: { index: true, follow: true },
 };

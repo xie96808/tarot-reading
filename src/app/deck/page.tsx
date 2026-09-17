@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CARD_LEXICON_LIST } from '@/data/lexicons/zh-1';
+import { EmptyDeck } from '@/components/deck/EmptyDeck';
 import { CardFaceStatic } from '@/components/deck/CardFaceStatic';
 import { DECK_FILTERS, filterDeck, isDeckFilter } from '@/lib/deck-filter';
 import styles from './page.module.css';
@@ -40,7 +41,7 @@ export default async function DeckIndexPage({ searchParams }: Props) {
           </Link>
         ))}
       </div>
-      <ul className={filterStyles.grid}>
+      {visible.length === 0 ? <EmptyDeck /> : <ul className={filterStyles.grid}>
         {visible.map((card) => (
           <li key={card.id}>
             <Link href={`/deck/${card.id}`}>
@@ -49,7 +50,7 @@ export default async function DeckIndexPage({ searchParams }: Props) {
             </Link>
           </li>
         ))}
-      </ul>
+      </ul>}
     </main>
   );
 }

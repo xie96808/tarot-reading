@@ -3,6 +3,12 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
+  outputFileTracingIncludes: {
+    '/r/*/opengraph-image': [
+      './public/share/parchment-strip.jpg',
+      './node_modules/@fontsource/noto-serif-sc/files/noto-serif-sc-chinese-simplified-400-normal.woff',
+    ],
+  },
   async headers() {
     return [
       {

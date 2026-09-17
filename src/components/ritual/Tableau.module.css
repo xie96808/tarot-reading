@@ -1,8 +1,9 @@
 .row {
+  width: 100%;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 180px));
+  grid-template-columns: repeat(auto-fit, minmax(110px, 130px));
   justify-content: center;
-  gap: 24px;
+  gap: 18px;
 }
 
 .item,
@@ -26,13 +27,14 @@
 }
 
 .celticWrap {
-  overflow: auto;
+  width: 100%;
+  min-width: 0;
 }
 
 .celtic {
   position: relative;
   width: min(100%, 720px);
-  height: 650px;
+  height: 1100px;
   margin: 0 auto;
 }
 
@@ -67,7 +69,7 @@
 
 .step {
   display: none;
-  max-width: 240px;
+  max-width: 170px;
   margin: 0 auto 24px;
   text-align: center;
 }
@@ -124,12 +126,22 @@
 
   .celticWrap.dealingBoard .celtic {
     display: block;
-    height: 420px;
-    transform: scale(0.72);
-    transform-origin: top center;
+    height: 520px;
   }
 
   .celticWrap.dealingBoard .step {
     display: none;
   }
+}
+
+@media (max-width: 1023px) {
+  .celticWrap.dealingBoard .celticSlot { width: clamp(32px, 8vw, 64px); }
+  .celticWrap.dealingBoard button { display: none; }
+}
+
+/* Leave room for the two controls beneath the crossing cards. */
+@media (min-width: 1024px) {
+  .presentSlot p,
+  .presentSlot > div > button { transform: translateY(76px); }
+  .celticSlot > div > button { padding-inline: 4px; font-size: 12px; }
 }

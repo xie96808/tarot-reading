@@ -14,7 +14,7 @@ import { loadFaceIndex, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
 import { dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
-import { pointerOffset, tableHandMode } from '@/lib/table-hands';
+import { tableHandMode } from '@/lib/table-hands';
 import { CardBack } from './CardBack';
 import { TableScene } from './TableScene';
 import { ShuffleTable } from './ShuffleTable';
@@ -44,7 +44,6 @@ export function RitualApp() {
   const holding = useRef(false);
   const [pageHidden, setPageHidden] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [handPointer, setHandPointer] = useState({ x: 0, y: 0 });
   const [pendingResume, setPendingResume] = useState<RitualSession | null>(null);
   const [restartAsk, setRestartAsk] = useState(false);
 
@@ -336,17 +335,14 @@ export function RitualApp() {
               shufflePhase: state.shufflePhase,
               reduced: reducedMotion || pageHidden,
             })}
-            pointer={handPointer}
             label={state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}
             onPointerDown={(event) => {
               holding.current = true;
               samples.current = [];
               (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-              setHandPointer(pointerOffset(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect()));
               dispatch({ type: 'HOLD_START', operationId: newOperationId() });
             }}
             onPointerMove={(event) => {
-              setHandPointer(pointerOffset(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect()));
               if (!holding.current) return;
               samples.current.push({ x: event.clientX, y: event.clientY, t: performance.now() });
               dispatch({ type: 'HOLD_SAMPLE' });
@@ -391,7 +387,7 @@ export function RitualApp() {
           </details>
           <TableScene
             hand={tableHandMode({ stage: 'cut', reduced: reducedMotion })}
-            pointer={handPointer}
+            feedbackLabel="查看切牌比例示意"
             label={COPY.cutTitle}
           >
             <CutTable cutIndex={state.cutIndex} />

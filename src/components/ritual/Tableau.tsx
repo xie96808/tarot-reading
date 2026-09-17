@@ -47,7 +47,7 @@ export function Tableau({
         urls={selectedRevealed ? faces.get(selected.cardId) : undefined}
         sizes="220px"
         reversed={selected.orientation === 'reversed'}
-        crossing={selected.positionId === 'challenge'}
+        crossing={false}
         dealing={dealing}
         dealDelayMs={dealDelayMs(
           spread.positions.findIndex((p) => p.id === selected.positionId),
@@ -122,38 +122,41 @@ export function Tableau({
   }
 
   return (
-    <div className={`${styles.row} ${dealing ? styles.dealingBoard : ''}`} role="list">
-      {spread.positions.map((position) => {
-        const draw = draws.find((item) => item.positionId === position.id)!;
-        const isRevealed = revealed.includes(position.id);
-        const urls = isRevealed ? faces.get(draw.cardId) : undefined;
-        return (
-          <div
-            key={position.id}
-            role="listitem"
-            className={`${styles.item} ${selectedPositionId === position.id ? styles.selected : ''}`}
-          >
-            <button type="button" className={styles.hit} onClick={() => onSelect(position.id)}>
-              <span className="visually-hidden">{position.nameZh}</span>
-            </button>
-            <Card3D
-              revealed={isRevealed}
-              urls={urls}
-              sizes="(max-width: 720px) 220px, 170px"
-              reversed={draw.orientation === 'reversed'}
-              dealing={dealing}
-              dealDelayMs={dealDelayMs(position.drawOrder - 1, count)}
-              alt={
-                isRevealed
-                  ? `${CARDS[draw.cardId].nameZh} ${draw.orientation === 'reversed' ? COPY.reversed : COPY.upright}`
-                  : position.nameZh
-              }
-              label={position.nameZh}
-              onReveal={isRevealed || !onReveal ? undefined : () => onReveal(position.id)}
-            />
-          </div>
-        );
-      })}
-    </div>
+    <>
+      {!dealing ? stepped : null}
+      <div className={`${styles.row} ${dealing ? styles.dealingBoard : ''}`} role="list">
+        {spread.positions.map((position) => {
+          const draw = draws.find((item) => item.positionId === position.id)!;
+          const isRevealed = revealed.includes(position.id);
+          const urls = isRevealed ? faces.get(draw.cardId) : undefined;
+          return (
+            <div
+              key={position.id}
+              role="listitem"
+              className={`${styles.item} ${selectedPositionId === position.id ? styles.selected : ''}`}
+            >
+              <button type="button" className={styles.hit} onClick={() => onSelect(position.id)}>
+                <span className="visually-hidden">{position.nameZh}</span>
+              </button>
+              <Card3D
+                revealed={isRevealed}
+                urls={urls}
+                sizes="(max-width: 720px) 220px, 170px"
+                reversed={draw.orientation === 'reversed'}
+                dealing={dealing}
+                dealDelayMs={dealDelayMs(position.drawOrder - 1, count)}
+                alt={
+                  isRevealed
+                    ? `${CARDS[draw.cardId].nameZh} ${draw.orientation === 'reversed' ? COPY.reversed : COPY.upright}`
+                    : position.nameZh
+                }
+                label={position.nameZh}
+                onReveal={isRevealed || !onReveal ? undefined : () => onReveal(position.id)}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

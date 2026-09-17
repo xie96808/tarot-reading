@@ -11,6 +11,8 @@
 }
 
 .crossing .flip {
+  position: relative;
+  isolation: isolate;
   transform: rotateZ(90deg);
 }
 
@@ -72,15 +74,17 @@
   object-fit: cover;
 }
 
-.inner.revealed::after {
-  content: '';
+.glow {
   position: absolute;
-  inset: -12%;
+  inset: -22%;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(circle, rgba(232, 200, 74, 0.38), transparent 68%);
-  animation: settleGlow 560ms ease;
+  opacity: 0;
+  background: url('/ui/card-glow.png') center / contain no-repeat;
+  mix-blend-mode: screen;
 }
+
+.glowing { animation: settleGlow 560ms ease both; }
 
 @keyframes settleGlow {
   0% {
@@ -144,7 +148,7 @@
     transition: none;
   }
 
-  .inner.revealed::after,
+  .glowing,
   .dealing {
     animation: none;
   }
