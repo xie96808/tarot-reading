@@ -1,4 +1,4 @@
-name: Sync main source to Aliyun
+name: Deploy main to Aliyun
 
 on:
   push:
@@ -13,20 +13,41 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  sync:
+  deploy:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_COMMIT_SHA: ${{ github.sha }}
+      SITE_URL: https://tarot.xieyw.top
+      ICP_NUMBER: ${{ vars.ICP_NUMBER }}
     steps:
       - name: Check out the pushed commit
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - name: Send committed source into a revision directory
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.2'
+      - name: Install dependencies and validate
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          python3 -m unittest discover -s deploy/server -p 'test_*.py' -v
+      - name: Build Linux standalone release
+        run: |
+          npm run build
+          mkdir -p .next/standalone/public .next/standalone/.next/static
+          cp -R public/. .next/standalone/public/
+          cp -R .next/static/. .next/standalone/.next/static/
+          printf '%s\n' "$GITHUB_SHA" > .next/standalone/RELEASE_SHA
+      - name: Publish and activate with health-check rollback
         env:
           SYNC_HOST: ${{ vars.ALIYUN_SYNC_HOST }}
           SYNC_USER: ${{ vars.ALIYUN_SYNC_USER }}
           SYNC_PORT: ${{ vars.ALIYUN_SYNC_PORT }}
           SYNC_PRIVATE_KEY: ${{ secrets.ALIYUN_SYNC_SSH_KEY }}
           SYNC_KNOWN_HOSTS: ${{ secrets.ALIYUN_SYNC_KNOWN_HOSTS }}
-        run: bash deploy/sync-source.sh
+        run: bash deploy/publish-release.sh

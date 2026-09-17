@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Legacy manual source utility; the automatic workflow now uses publish-release.sh.
 # SSH key is restricted server-side to rsync writes beneath /srv/tarot/source.
 set -euo pipefail
 : "${SYNC_HOST:?Set ALIYUN_SYNC_HOST}"
