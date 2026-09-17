@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>烛下塔罗</title>
+  <rect width="64" height="64" rx="12" fill="#14110e"/>
+  <g fill="none" stroke="#c4a35a" stroke-width="2" transform="translate(32 32)">
+    <circle r="22" opacity="0.95"/>
+    <circle r="19" opacity="0.45"/>
+    <circle r="7" opacity="0.9"/>
+    <g opacity="0.92">
+      <path d="M0 -17 C3 -11.5 3 -7.5 0 -5 C-3 -7.5 -3 -11.5 0 -17Z"/>
+      <path d="M0 17 C3 11.5 3 7.5 0 5 C-3 7.5 -3 11.5 0 17Z"/>
+      <path d="M17 0 C11.5 3 7.5 3 5 0 C7.5 -3 11.5 -3 17 0Z"/>
+      <path d="M-17 0 C-11.5 3 -7.5 3 -5 0 C-7.5 -3 -11.5 -3 -17 0Z"/>
+    </g>
+    <g opacity="0.7" transform="rotate(45)">
+      <path d="M0 -13 C2 -9 2 -6.5 0 -4.5 C-2 -6.5 -2 -9 0 -13Z"/>
+      <path d="M0 13 C2 9 2 6.5 0 4.5 C-2 6.5 -2 9 0 13Z"/>
+      <path d="M13 0 C9 2 6.5 2 4.5 0 C6.5 -2 9 -2 13 0Z"/>
+      <path d="M-13 0 C-9 2 -6.5 2 -4.5 0 C-6.5 -2 -9 -2 -13 0Z"/>
+    </g>
+    <rect x="-2.6" y="-2.6" width="5.2" height="5.2" transform="rotate(45)" fill="#c4a35a" stroke="none" opacity="0.85"/>
+  </g>
+</svg>

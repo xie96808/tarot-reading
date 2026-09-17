@@ -70,6 +70,19 @@ function RitualClient() {
     saveSession(persistable(state));
   }, [state, pendingResume]);
 
+  const pushedHistoryRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (state.stage !== 'close' || !state.receipt.saved) return;
+    if (pushedHistoryRef.current === state.receipt.sessionId) return;
+    pushedHistoryRef.current = state.receipt.sessionId;
+    pushHistory({
+      receipt: state.receipt,
+      question: state.receipt.savePrivate ? state.receipt.question : undefined,
+      note: state.receipt.savePrivate ? state.receipt.note : undefined,
+      savedAt: Date.now(),
+    });
+  }, [state]);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (state.stage !== 'shuffle') return;
@@ -203,7 +216,9 @@ function RitualClient() {
           <p>{COPY.enterBody}</p>
           {pendingResume ? (
             <>
-              <p className={styles.warn}>{COPY.resumeBody}</p>
+              <p className={styles.warn}>
+                {pendingResume.stage === 'close' ? COPY.resumeClosedBody : COPY.resumeBody}
+              </p>
               <button
                 type="button"
                 className={styles.primary}
@@ -215,7 +230,7 @@ function RitualClient() {
                   setState(next);
                 }}
               >
-                {COPY.resumeContinue}
+                {pendingResume.stage === 'close' ? COPY.resumeClosedContinue : COPY.resumeContinue}
               </button>
               <button type="button" className={styles.ghost} onClick={() => setRestartAsk(true)}>
                 {COPY.resumeRestart}
@@ -248,10 +263,8 @@ function RitualClient() {
             maxLength={MAX_QUESTION_CODEPOINTS * 2}
             placeholder={COPY.questionPlaceholder}
             onChange={(event) => {
-              const next = event.target.value;
-              if ([...next].length <= MAX_QUESTION_CODEPOINTS) {
-                dispatch({ type: 'SET_QUESTION', question: next });
-              }
+              const next = [...event.target.value].slice(0, MAX_QUESTION_CODEPOINTS).join('');
+              dispatch({ type: 'SET_QUESTION', question: next });
             }}
             onKeyDown={(event) => {
               if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
@@ -259,6 +272,11 @@ function RitualClient() {
               }
             }}
           />
+          {[...state.question].length >= MAX_QUESTION_CODEPOINTS - 20 ? (
+            <p className={styles.muted} aria-live="polite">
+              {COPY.questionCount([...state.question].length)}
+            </p>
+          ) : null}
           <p className={styles.muted}>{COPY.questionPrivacy}</p>
           <div className={styles.examples}>
             {COPY.questionExamples.map((example) => (
@@ -567,15 +585,6 @@ function RitualClient() {
                 const url = `${window.location.origin}/r/${id}`;
                 setShareUrl(url);
                 void navigator.clipboard?.writeText(url);
-                if (state.receipt.saved) {
-                  pushHistory({
-                    receipt: state.receipt,
-                    question: state.receipt.savePrivate ? state.receipt.question : undefined,
-                    note: state.receipt.savePrivate ? state.receipt.note : undefined,
-                    savedAt: Date.now(),
-                  });
-                }
-                clearSession();
               } catch (error) {
                 setShareUrl(error instanceof Error ? error.message : '无法生成链接');
               }
