@@ -11,12 +11,12 @@
 }
 
 .crossing .flip {
-  position: relative;
-  isolation: isolate;
   transform: rotateZ(90deg);
 }
 
 .flip {
+  position: relative;
+  isolation: isolate;
   width: 100%;
   aspect-ratio: var(--card-ratio);
   perspective: 1400px;
@@ -24,10 +24,11 @@
 
 .inner {
   position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  transition: transform 560ms cubic-bezier(0.2, 0.75, 0.2, 1);
+  transition: transform var(--flip-ms, 640ms) cubic-bezier(0.2, 0.75, 0.2, 1);
 }
 
 .inner.revealed {
@@ -77,7 +78,7 @@
 .glow {
   position: absolute;
   inset: -22%;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
   opacity: 0;
   background: url('/ui/card-glow.png') center / contain no-repeat;
@@ -101,19 +102,19 @@
 }
 
 .dealing {
-  animation: dealIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: dealIn var(--deal-ms, 620ms) cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--deal-delay, 0ms);
 }
 
 @keyframes dealIn {
   from {
     opacity: 0;
-    transform: translate3d(-28px, -92px, 0) rotate(-16deg) scale(0.72);
+    transform: translate3d(var(--deal-x, 0px), var(--deal-y, -160px), 0) rotate(-12deg) scale(0.55);
     filter: brightness(0.7);
   }
-  62% {
+  78% {
     opacity: 1;
-    transform: translate3d(6px, 10px, 0) rotate(3deg) scale(1.03);
+    transform: translate3d(0, 7px, 0) rotate(2deg) scale(1.025);
   }
   to {
     opacity: 1;
@@ -153,3 +154,5 @@
     animation: none;
   }
 }
+
+.waiting { display: grid; place-items: center; width: 100%; height: 100%; background: var(--parchment); color: var(--frame); font-size: 13px; padding: 12px; text-align: center; }

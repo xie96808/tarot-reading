@@ -1,93 +1,54 @@
-.wrap,
-.scene {
-  width: min(100%, 920px);
-  margin-inline: auto;
-  min-width: 0;
-}
-
 .scene {
   position: relative;
   isolation: isolate;
-  border-radius: 4px;
-  background: #120e0b;
-  box-shadow: 0 24px 50px rgb(0 0 0 / 35%);
-}
-
-.photo {
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-}
-
-.grab {
-  cursor: grab;
-  touch-action: pan-y;
-  user-select: none;
-}
-
-.grab:active { cursor: grabbing; }
-
-.surface {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  overflow: hidden;
-  border-radius: inherit;
-}
-
-.surface img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 54% 52%;
-}
-
-.photo .surface img { object-fit: contain; }
-
-.spread {
-  min-height: 560px;
-  display: grid;
-  align-items: center;
-  padding: 124px 12% 52px;
-}
-
-.felt {
-  position: relative;
-  width: 100%;
+  width: min(100%, 920px);
   min-width: 0;
+  margin-inline: auto;
+  border-radius: 12px;
+  background: #20150f;
+  box-shadow: 0 24px 60px #0007, inset 0 0 0 1px #e7c27822;
 }
-
-.feedback {
-  margin-top: 12px;
-  color: var(--parchment-dim);
-  font-size: 14px;
-  text-align: center;
+.play { aspect-ratio: 16 / 10; min-height: 380px; overflow: hidden; }
+.grab { cursor: grab; touch-action: pan-y; user-select: none; }
+.grab:active { cursor: grabbing; }
+.surface { position: absolute; inset: 0; z-index: -3; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.surface img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.mat {
+  position: absolute;
+  inset: 9% 7%;
+  z-index: -2;
+  border-radius: 46%;
+  border: 1px solid #c4a35a45;
+  background:
+    repeating-linear-gradient(6deg, #ffffff03 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(94deg, #00000010 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at 35% 25%, #294336, #142c23 62%, #0b1c16);
+  box-shadow: 0 12px 20px #0008, inset 0 0 0 7px #09191055, inset 0 0 35px #0007;
+  pointer-events: none;
 }
-
-.feedback summary {
-  cursor: pointer;
-  padding: 10px;
-  min-height: 44px;
+.light { position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(ellipse at 12% 0, #ffd68526, transparent 58%);
+  animation: candlelight 5s ease-in-out infinite alternate;
 }
-
-.diagram {
-  width: min(100%, 320px);
-  height: 220px;
-  margin: 12px auto;
-  border: 1px solid rgb(196 163 90 / 25%);
-  background: var(--ink-2);
-  overflow: hidden;
-  border-radius: 4px;
+.inscription { position: absolute; top: 8%; left: 0; right: 0; text-align: center; font-size: 12px; letter-spacing: .26em; color: #decfa486; pointer-events: none; }
+.content { position: relative; min-width: 0; width: 100%; }
+.play .content { position: absolute; inset: 17% 8% 12%; width: 84%; }
+.spread { min-height: 560px; padding: 100px 12% 64px; }
+.spread .mat { inset: 28px 4%; border-radius: 110px; }
+.spread .inscription { top: 30px; }
+.motes { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.motes i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #ffdf9d; opacity: 0;
+  left: calc(17% + var(--m) * 13%); bottom: 24%; box-shadow: 0 0 7px #fbd78b;
+  animation: drift 7s ease-in-out infinite; animation-delay: calc(var(--m) * -1.2s);
 }
-
-@media (max-width: 1023px) {
-  .spread {
-    min-height: 540px;
-    padding: 48px 24px;
-  }
+@keyframes candlelight { from { opacity: .5; } to { opacity: 1; } }
+@keyframes drift { 0%,100% { opacity: 0; transform: translate3d(0, 0, 0); } 35% { opacity: .4; } 80% { opacity: 0; transform: translate3d(12px, -140px, 0); } }
+.scene[data-paused='true'] *, .scene[data-paused='true'] *::before, .scene[data-paused='true'] *::after { animation-play-state: paused !important; }
+@media (max-width: 1023px) { .spread { padding: 72px 24px 48px; } }
+@media (max-width: 600px) {
+  .play { aspect-ratio: auto; height: 400px; }
+  .mat { inset: 10% 4%; border-radius: 42%; }
+  .spread .mat { border-radius: 70px; inset-inline: 8px; }
 }
-
-@media (max-width: 400px) {
-  .spread { padding-inline: 16px; }
-}
+@media (max-width: 400px) { .spread { padding-inline: 16px; } }
+@media (prefers-reduced-motion: reduce) { .light, .motes i { animation: none; } .motes { display: none; } }

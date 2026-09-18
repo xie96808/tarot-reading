@@ -12,16 +12,16 @@ for (const width of [375, 390, 719, 720, 721, 768, 1023, 1024, 1440]) {
   test(`table geometry and visible three-card reading at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1000 });
     await enter(page);
-    const photo = page.locator('[data-table-scene="photo"]');
+    const photo = page.locator('[data-table-scene="play"]');
     const box = await photo.boundingBox();
     expect(box).not.toBeNull();
-    expect(box!.width / box!.height).toBeCloseTo(16 / 9, 2);
-    await expect.poll(() => photo.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1600);
-    expect(await photo.locator('img').evaluate((img) => getComputedStyle(img).transform)).toBe('none');
+    expect(box!.height).toBeGreaterThanOrEqual(380);
+    await expect.poll(() => photo.locator('[data-table-background]').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1600);
+    expect(await photo.locator('[data-table-background]').evaluate((img) => getComputedStyle(img).transform)).toBe('none');
     await page.getByRole('button', { name: '为我洗牌' }).click();
     await expect(page.getByRole('button', { name: '让牌落在桌上' })).toBeVisible({ timeout: 15000 });
-    await page.getByText('查看切牌比例示意', { exact: true }).click();
-    await expect(page.locator('details[open]')).toBeVisible();
+    await expect(page.locator('[data-cut-packet]')).toHaveCount(2);
+    await expect(page.locator('[data-cut-packet]').first()).toBeVisible();
     await page.getByRole('button', { name: '让牌落在桌上' }).click();
     const next = page.locator('main').getByRole('button', { name: '翻开这一张' }).last();
     await expect(next).toBeVisible({ timeout: 10000 });
@@ -50,7 +50,7 @@ test('reduced motion, missing decorations, and enlarged reading text keep the re
   await page.route('**/ui/**', (route) => route.abort());
   await page.route('**/share/parchment-strip.jpg', (route) => route.abort());
   await enter(page, true);
-  await expect(page.locator('[data-table-scene="photo"]')).toHaveAttribute('data-hand', 'none');
+  await expect(page.locator('[data-table-scene="play"]')).toHaveAttribute('data-hand', 'none');
   await page.getByRole('button', { name: '为我洗牌' }).click();
   await page.getByRole('button', { name: '让牌落在桌上' }).click({ timeout: 15000 });
   const next = page.locator('main').getByRole('button', { name: '翻开这一张' }).last();
@@ -62,9 +62,9 @@ test('reduced motion, missing decorations, and enlarged reading text keep the re
   await expect(page.getByRole('button', { name: '书页阅读' })).toBeVisible();
 });
 
-test('pointer shuffle switches photographs without moving the table', async ({ page }) => {
+test('pointer shuffle animates the deck without moving the table', async ({ page }) => {
   await enter(page);
-  const scene = page.locator('[data-table-scene="photo"]');
+  const scene = page.locator('[data-table-scene="play"]');
   await page.evaluate(() => document.fonts.ready);
   await page.locator('section').filter({ has: scene }).evaluate(async (element) => {
     await Promise.all(element.getAnimations().map((animation) => animation.finished));

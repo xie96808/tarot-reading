@@ -1,5 +1,6 @@
 'use client';
 
+import { useLayoutEffect, useRef, useState } from 'react';
 import { CELTIC_SLOT_PERCENT, SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
 import { CARDS } from '@/data/lexicons/zh-1';
 import type { Draw } from '@/lib/shuffle';
@@ -30,6 +31,25 @@ export function Tableau({
   onReveal,
   dealing = false,
 }: TableauProps) {
+  const [selection, setSelection] = useState({ revealed, position: selectedPositionId, animate: false });
+  if (selection.revealed !== revealed || selection.position !== selectedPositionId) {
+    setSelection({ revealed, position: selectedPositionId,
+      animate: revealed.includes(selectedPositionId) && !selection.revealed.includes(selectedPositionId) });
+  }
+  const board = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!dealing || !board.current) return;
+    const origin = board.current.closest('[data-table-scene]')?.querySelector('[data-deck-origin]');
+    if (!origin) return;
+    const source = origin.getBoundingClientRect();
+    for (const card of board.current.querySelectorAll<HTMLElement>('[data-deal-card]')) {
+      const target = card.parentElement?.getBoundingClientRect();
+      if (!target?.width) continue;
+      card.style.setProperty('--deal-x', `${source.x + source.width / 2 - target.x - target.width / 2}px`);
+      card.style.setProperty('--deal-y', `${source.y + source.height / 2 - target.y - target.width * .8}px`);
+    }
+  }, [dealing, spreadId]);
+
   const spread = SPREADS[spreadId];
   const count = spread.positions.length;
   const selected = draws.find((item) => item.positionId === selectedPositionId) ?? draws[0];
@@ -37,7 +57,7 @@ export function Tableau({
   const selectedRevealed = revealed.includes(selected.positionId);
 
   const stepped = (
-    <div className={styles.step}>
+    <div key={selected.positionId} className={styles.step}>
       <p>
         {selectedMeta.nameZh} · {spread.positions.findIndex((p) => p.id === selected.positionId) + 1}/
         {spread.positions.length}
@@ -45,6 +65,7 @@ export function Tableau({
       <Card3D
         key={`${selected.positionId}:${selected.cardId}`}
         revealed={selectedRevealed}
+        animateOnMount={selection.animate}
         urls={selectedRevealed ? faces.get(selected.cardId) : undefined}
         sizes="220px"
         reversed={selected.orientation === 'reversed'}
@@ -79,7 +100,7 @@ export function Tableau({
 
   if (spreadId === 'celtic') {
     return (
-      <div className={`${styles.celticWrap} ${dealing ? styles.dealingBoard : ''}`}>
+      <div ref={board} className={`${styles.celticWrap} ${dealing ? styles.dealingBoard : ''}`}>
         {stepped}
         <div className={styles.celtic} role="list">
           {spread.positions.map((position) => {
@@ -99,7 +120,7 @@ export function Tableau({
                     现状
                   </button>
                 ) : null}
-                <button type="button" className={styles.hit} onClick={() => onSelect(position.id)}>
+                <button type="button" className={styles.hit} onClick={() => { onSelect(position.id); if (!isRevealed && !dealing) onReveal?.(position.id); }}>
                   <span className="visually-hidden">{position.nameZh}</span>
                 </button>
                 <Card3D
@@ -123,7 +144,7 @@ export function Tableau({
   }
 
   return (
-    <>
+    <div ref={board}>
       {!dealing ? stepped : null}
       <div className={`${styles.row} ${dealing ? styles.dealingBoard : ''}`} role="list">
         {spread.positions.map((position) => {
@@ -136,7 +157,7 @@ export function Tableau({
               role="listitem"
               className={`${styles.item} ${selectedPositionId === position.id ? styles.selected : ''}`}
             >
-              <button type="button" className={styles.hit} onClick={() => onSelect(position.id)}>
+              <button type="button" className={styles.hit} onClick={() => { onSelect(position.id); if (!isRevealed && !dealing) onReveal?.(position.id); }}>
                 <span className="visually-hidden">{position.nameZh}</span>
               </button>
               <Card3D
@@ -158,6 +179,6 @@ export function Tableau({
           );
         })}
       </div>
-    </>
+    </div>
   );
 }

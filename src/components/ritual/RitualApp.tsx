@@ -10,10 +10,10 @@ import { encodeReading } from '@/lib/reading-codec';
 import { commitShuffle, newOperationId, randomCutIndex } from '@/lib/ritual-effects';
 import { canResume, createSession, persistable, reduce, type RitualSession } from '@/lib/ritual-machine';
 import { clearSession, loadSession, pushHistory, saveSession, subscribeStorageStatus, storageStatusSnapshot, serverStorageStatusSnapshot } from '@/lib/storage';
-import { loadFaceIndex, type FaceUrls } from '@/lib/faces';
+import { loadFaceIndex, pictureSources, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
-import { dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
+import { MOTION, dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
 import { tableHandMode } from '@/lib/table-hands';
 import { CardBack } from './CardBack';
 import { TableScene } from './TableScene';
@@ -42,6 +42,8 @@ export function RitualApp() {
 function RitualClient() {
   const [state, setState] = useState<RitualSession>(() => createSession());
   const [faces, setFaces] = useState<Map<string, FaceUrls>>(new Map());
+  const [faceLoadError, setFaceLoadError] = useState(false);
+  const [cutCommitSession, setCutCommitSession] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState('');
   const [includeQuestion, setIncludeQuestion] = useState(false);
   const storageNote = useSyncExternalStore(subscribeStorageStatus, storageStatusSnapshot, serverStorageStatusSnapshot);
@@ -61,7 +63,7 @@ function RitualClient() {
 
   useEffect(() => {
     let cancelled = false;
-    loadFaceIndex().then((index) => { if (!cancelled) setFaces(index); }).catch(() => undefined);
+    loadFaceIndex().then((index) => { if (!cancelled) setFaces(index); }).catch(() => { if (!cancelled) setFaceLoadError(true); });
     return () => { cancelled = true; };
   }, []);
 
@@ -151,6 +153,29 @@ function RitualClient() {
     return () => window.clearTimeout(timer);
   }, [state, dispatch]);
 
+  useEffect(() => {
+    if (state.stage !== 'cut' || cutCommitSession !== state.sessionId) return;
+    const timer = window.setTimeout(() => {
+      setCutCommitSession(null);
+      dispatch({ type: 'CONFIRM_CUT' });
+    }, reducedMotion ? 0 : MOTION.cutMs);
+    return () => window.clearTimeout(timer);
+  }, [state.stage, state.sessionId, cutCommitSession, reducedMotion, dispatch]);
+
+  const previewDraws = 'draws' in state ? state.draws : null;
+  useEffect(() => {
+    if (!previewDraws) return;
+    // Warm the same responsive WebP candidates before the user turns a card.
+    for (const draw of previewDraws) {
+      const urls = faces.get(draw.cardId);
+      if (!urls) continue;
+      const image = new Image();
+      image.sizes = '(max-width: 1023px) 170px, 130px';
+      image.srcset = pictureSources(urls, image.sizes).webpSrcSet;
+      image.src = urls.variants[320].webp;
+    }
+  }, [previewDraws, faces]);
+
   const reading = useMemo(() => {
     if (state.stage !== 'read' && state.stage !== 'close') return null;
     if (!('draws' in state) && state.stage !== 'close') return null;
@@ -173,6 +198,13 @@ function RitualClient() {
           ? `已翻开 ${state.revealed.length} / ${state.draws.length}`
           : chapter(state.stage)}
       </p>
+      {faceLoadError ? <div className={styles.warn} role="alert">
+        <p>牌面资源暂未就绪，请检查网络后重试。</p>
+        <button type="button" onClick={() => {
+          setFaceLoadError(false);
+          loadFaceIndex().then(setFaces).catch(() => setFaceLoadError(true));
+        }}>重新加载牌面</button>
+      </div> : null}
       {storageNote ? <p className={styles.warn}>{COPY.storageFallback}</p> : null}
       {state.abandonOpen ? (
         <ConfirmModal onCancel={() => dispatch({ type: 'ABANDON_CANCEL' })}>
@@ -341,6 +373,7 @@ function RitualClient() {
         <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`}>
           <h1>{COPY.shuffleTitle}</h1>
           <TableScene
+            paused={pageHidden}
             hand={tableHandMode({
               stage: 'shuffle',
               shufflePhase: state.shufflePhase,
@@ -397,11 +430,11 @@ function RitualClient() {
             <p className={styles.muted}>只检查本标签页牌序是否自洽，不是公证。</p>
           </details>
           <TableScene
+            paused={pageHidden}
             hand={tableHandMode({ stage: 'cut', reduced: reducedMotion })}
-            feedbackLabel="查看切牌比例示意"
             label={COPY.cutTitle}
           >
-            <CutTable cutIndex={state.cutIndex} />
+            <CutTable cutIndex={state.cutIndex} gathering={cutCommitSession === state.sessionId} />
           </TableScene>
           <label>
             {COPY.cutHint(state.cutIndex)}
@@ -412,14 +445,14 @@ function RitualClient() {
               max={77}
               step={1}
               value={state.cutIndex}
-              disabled={Boolean(state.operationId)}
+              disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
               onChange={(event) => dispatch({ type: 'SET_CUT', cutIndex: Number(event.target.value) })}
             />
           </label>
           <button
             type="button"
             className={styles.ghost}
-            disabled={Boolean(state.operationId)}
+            disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
             onClick={async () => {
               const operationId = newOperationId();
               dispatch({ type: 'AUTO_CUT_REQUEST', operationId });
@@ -436,8 +469,8 @@ function RitualClient() {
           <button
             type="button"
             className={styles.primary}
-            disabled={Boolean(state.operationId)}
-            onClick={() => dispatch({ type: 'CONFIRM_CUT' })}
+            disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
+            onClick={() => setCutCommitSession(state.sessionId)}
           >
             {COPY.cutConfirm}
           </button>
@@ -449,11 +482,12 @@ function RitualClient() {
           {state.stage === 'deal' ? <p className={styles.dealHint}>牌正在落到桌上</p> : null}
           <div className={state.stage === 'read' && state.view === 'page' ? styles.tableParked : undefined}>
             <TableScene
+              paused={pageHidden}
               hand={tableHandMode({ stage: state.stage, reduced: reducedMotion })}
               layout="spread"
             >
               {state.stage === 'deal' ? (
-                <div className={styles.dealSource} aria-hidden="true">
+                <div className={styles.dealSource} data-deck-origin aria-hidden="true">
                   <CardBack alt="" />
                 </div>
               ) : null}
