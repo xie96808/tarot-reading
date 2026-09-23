@@ -14,14 +14,32 @@ umask 077
 printf '%s\n' "$SYNC_PRIVATE_KEY" > "$work/key"
 printf '%s\n' "$SYNC_KNOWN_HOSTS" > "$work/known_hosts"
 unset SYNC_PRIVATE_KEY SYNC_KNOWN_HOSTS
-ssh_args=(-i "$work/key" -p "$SYNC_PORT" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$work/known_hosts" -o ConnectTimeout=15)
-export RSYNC_RSH="ssh -i $work/key -p $SYNC_PORT -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$work/known_hosts -o ConnectTimeout=15"
+# Keep long uploads alive; GitHub Actions → Aliyun can stall without SSH keepalives.
+ssh_base=(-i "$work/key" -p "$SYNC_PORT" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$work/known_hosts" -o ConnectTimeout=15 -o ServerAliveInterval=20 -o ServerAliveCountMax=30)
+ssh_args=("${ssh_base[@]}")
+export RSYNC_RSH="ssh ${ssh_base[*]}"
 mkdir "$work/upload"
 # Follow build-time symlinks so the server can reject all link entries safely.
 tar --dereference --hard-dereference -czf "$work/upload/release.tar.gz" -C .next/standalone .
-[[ $(wc -c < "$work/upload/release.tar.gz") -le 268435456 ]] || { echo 'Artifact exceeds 256 MiB'; exit 1; }
+bytes=$(wc -c < "$work/upload/release.tar.gz")
+[[ "$bytes" -le 268435456 ]] || { echo 'Artifact exceeds 256 MiB'; exit 1; }
 sha256sum "$work/upload/release.tar.gz" | cut -d ' ' -f 1 > "$work/upload/release.sha256"
+printf 'Artifact %s bytes sha256=%s\n' "$bytes" "$(cat "$work/upload/release.sha256")"
 ssh "${ssh_args[@]}" "$SYNC_USER@$SYNC_HOST" "prepare $GITHUB_SHA"
-rsync -rltz --checksum --delay-updates "$work/upload/" "$SYNC_USER@$SYNC_HOST:$GITHUB_SHA/"
+# upload is already gzip; skip rsync -z. Integrity is enforced by release.sha256 on activate.
+# --timeout fails stalled sockets instead of sitting until the job limit.
+attempts=3
+for attempt in $(seq 1 "$attempts"); do
+  printf 'rsync attempt %s/%s\n' "$attempt" "$attempts"
+  if rsync -rlt --delay-updates --timeout=120 --info=progress2 \
+      "$work/upload/" "$SYNC_USER@$SYNC_HOST:$GITHUB_SHA/"; then
+    break
+  fi
+  if [[ "$attempt" -eq "$attempts" ]]; then
+    echo 'rsync failed after retries' >&2
+    exit 1
+  fi
+  sleep $((attempt * 5))
+done
 ssh "${ssh_args[@]}" "$SYNC_USER@$SYNC_HOST" "activate $GITHUB_SHA"
 printf '### Website deployed\n\nCommit: `%s`\n\nhttps://tarot.xieyw.top\n\nRetains 3 automated releases plus the original legacy backup. Uploads removed after success.\n' "$GITHUB_SHA" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
