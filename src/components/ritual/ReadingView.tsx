@@ -57,14 +57,19 @@ export function ReadingView({
         {doc.synthesis.split('\n').map((line) => (
           <p key={line}>{line}</p>
         ))}
-        {doc.relations.map((rel) => (
-          <details key={rel.edgeId}>
-            <summary>{COPY.whyThis}</summary>
-            <p>
-              {rel.ruleId} · {rel.sourcePositionIds.join(' / ')}
-            </p>
-          </details>
-        ))}
+        {doc.relations.map((rel) => {
+          const names = rel.sourcePositionIds.map(
+            (id) => doc.positions.find((p) => p.positionId === id)?.positionNameZh ?? id,
+          );
+          return (
+            <details key={rel.edgeId}>
+              <summary>{COPY.whyThis}</summary>
+              <p>
+                {names.join(' 与 ')}：{rel.text}
+              </p>
+            </details>
+          );
+        })}
       </section>
       <section>
         <h2>留给自己</h2>

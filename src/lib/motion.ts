@@ -8,7 +8,7 @@ export const MOTION = {
   dealFlightMs: 620,
   dealGapThreeMs: 180,
   dealGapCelticMs: 120,
-  dealCapMs: 2200,
+  dealCapMs: 1800,
   flipMs: 640,
   uprightPauseMs: 240,
   uprightMs: 780,

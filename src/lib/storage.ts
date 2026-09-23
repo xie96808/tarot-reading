@@ -88,14 +88,59 @@ export function saveSession(state: RitualSession): 'ok' | 'memory' {
   return writeStore('session', SESSION_STORAGE_KEY, JSON.stringify(state));
 }
 
+const SESSION_STAGES = new Set([
+  'enter',
+  'question',
+  'spread',
+  'shuffle',
+  'cut',
+  'deal',
+  'reveal',
+  'read',
+  'close',
+]);
+
+function isValidSession(value: unknown): value is RitualSession {
+  if (!value || typeof value !== 'object') return false;
+  const session = value as Record<string, unknown>;
+  if (typeof session.sessionId !== 'string' || !session.sessionId) return false;
+  if (typeof session.stage !== 'string' || !SESSION_STAGES.has(session.stage)) return false;
+  if (typeof session.question !== 'string') return false;
+  if (typeof session.spreadId !== 'string') return false;
+  if (typeof session.reversals !== 'boolean') return false;
+  if (typeof session.abandonOpen !== 'boolean') return false;
+  if (session.stage === 'shuffle') {
+    if (session.shufflePhase !== 'idle' && session.shufflePhase !== 'holding' && session.shufflePhase !== 'committing') {
+      return false;
+    }
+  }
+  if (session.stage === 'cut' || session.stage === 'deal' || session.stage === 'reveal' || session.stage === 'read') {
+    if (!Array.isArray(session.deckPreCut) || typeof session.commitShort !== 'string') return false;
+  }
+  if (session.stage === 'deal' || session.stage === 'reveal' || session.stage === 'read') {
+    if (!Array.isArray(session.draws) || !Array.isArray(session.revealed)) return false;
+  }
+  if (session.stage === 'close') {
+    const receipt = session.receipt;
+    if (!receipt || typeof receipt !== 'object') return false;
+    const r = receipt as Record<string, unknown>;
+    if (typeof r.sessionId !== 'string' || !Array.isArray(r.draws)) return false;
+  }
+  return true;
+}
+
 export function loadSession(): RitualSession | null {
   const raw = readStore('session', SESSION_STORAGE_KEY);
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as RitualSession;
-    if (!parsed || typeof parsed !== 'object' || !('stage' in parsed)) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isValidSession(parsed)) {
+      writeStore('session', SESSION_STORAGE_KEY, null);
+      return null;
+    }
     return parsed;
   } catch {
+    writeStore('session', SESSION_STORAGE_KEY, null);
     return null;
   }
 }
@@ -118,9 +163,20 @@ export function parseHistory(raw: string | null): HistoryEntry[] {
   }
 }
 
+function sanitizeHistoryEntry(entry: HistoryEntry): HistoryEntry {
+  if (entry.receipt.savePrivate) return entry;
+  return {
+    ...entry,
+    question: undefined,
+    note: undefined,
+    receipt: { ...entry.receipt, question: '', note: '' },
+  };
+}
+
 export function pushHistory(entry: HistoryEntry): HistoryEntry[] {
-  const current = loadHistory().filter((item) => item.receipt.sessionId !== entry.receipt.sessionId);
-  const next = [entry, ...current].slice(0, HISTORY_LIMIT);
+  const sanitized = sanitizeHistoryEntry(entry);
+  const current = loadHistory().filter((item) => item.receipt.sessionId !== sanitized.receipt.sessionId);
+  const next = [sanitized, ...current].slice(0, HISTORY_LIMIT);
   writeStore('local', HISTORY_STORAGE_KEY, JSON.stringify(next));
   return next;
 }

@@ -2,6 +2,7 @@
   max-width: var(--page-max);
   margin: 0 auto;
   padding: 0 var(--phone-gutter) var(--space-8);
+  overflow-x: clip;
 }
 
 .hero {
@@ -58,6 +59,9 @@
 .fan {
   position: relative;
   height: min(62vh, 560px);
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 .card {
@@ -146,7 +150,18 @@
     height: 340px;
     margin: 0 auto;
     width: min(100%, 360px);
+    max-width: 100%;
+    overflow: hidden;
   }
+
+  .card {
+    width: min(38vw, 160px);
+  }
+
+  .c1 { left: 8%; }
+  .c2 { left: 30%; }
+  .c3 { left: 48%; }
+
 
   .spreads ul {
     grid-template-columns: 1fr;

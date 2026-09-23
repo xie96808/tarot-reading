@@ -17,8 +17,11 @@ export function ConfirmModal({
   useEffect(() => {
     previous.current = document.activeElement as HTMLElement | null;
     const node = root.current;
-    const first = node?.querySelector<HTMLElement>('button');
-    first?.focus();
+    // Prefer explicit safe focus; otherwise last button (continue/cancel), never destructive-first.
+    const safe =
+      node?.querySelector<HTMLElement>('[data-safe-focus]') ??
+      (node ? [...node.querySelectorAll<HTMLElement>('button')].at(-1) : null);
+    safe?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();

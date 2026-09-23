@@ -77,10 +77,14 @@ function RitualClient() {
     if (state.stage !== 'close' || !state.receipt.saved) return;
     if (pushedHistoryRef.current === state.receipt.sessionId) return;
     pushedHistoryRef.current = state.receipt.sessionId;
+    const privateOk = state.receipt.savePrivate;
+    const receipt = privateOk
+      ? state.receipt
+      : { ...state.receipt, question: '', note: '' };
     pushHistory({
-      receipt: state.receipt,
-      question: state.receipt.savePrivate ? state.receipt.question : undefined,
-      note: state.receipt.savePrivate ? state.receipt.note : undefined,
+      receipt,
+      question: privateOk ? state.receipt.question || undefined : undefined,
+      note: privateOk ? state.receipt.note || undefined : undefined,
       savedAt: Date.now(),
     });
   }, [state]);
@@ -118,16 +122,19 @@ function RitualClient() {
     return () => document.removeEventListener('visibilitychange', cancelHiddenHold);
   }, [dispatch]);
 
+  const shufflePhase = state.stage === 'shuffle' ? state.shufflePhase : null;
+  const shuffleOperationId = state.stage === 'shuffle' ? state.operationId : null;
+  const shuffleReversals = state.reversals;
+
   useEffect(() => {
-    if (state.stage !== 'shuffle' || !('shufflePhase' in state) || state.shufflePhase !== 'committing') {
-      return;
-    }
+    // Only (re)start commit when entering committing for a given operation.
+    // Ignore unrelated state like abandonOpen so cleanup never reseals a live commit.
+    if (shufflePhase !== 'committing' || !shuffleOperationId) return;
     const sessionId = state.sessionId;
-    const operationId = state.operationId;
-    if (!operationId) return;
+    const operationId = shuffleOperationId;
     let cancelled = false;
     const holdMs = shuffleCommitHoldMs(prefersReducedMotion());
-    Promise.all([commitShuffle(samples.current, state.reversals), sleep(holdMs)])
+    Promise.all([commitShuffle(samples.current, shuffleReversals), sleep(holdMs)])
       .then(([result]) => {
         if (cancelled) return;
         dispatch({
@@ -144,7 +151,7 @@ function RitualClient() {
     return () => {
       cancelled = true;
     };
-  }, [state, dispatch]);
+  }, [shufflePhase, shuffleOperationId, shuffleReversals, state.sessionId, dispatch]);
 
   useEffect(() => {
     if (state.stage !== 'deal' || !('draws' in state)) return;
@@ -212,7 +219,7 @@ function RitualClient() {
           <button type="button" onClick={() => dispatch({ type: 'ABANDON_CONFIRM' })}>
             确定放弃
           </button>
-          <button type="button" onClick={() => dispatch({ type: 'ABANDON_CANCEL' })}>
+          <button type="button" data-safe-focus onClick={() => dispatch({ type: 'ABANDON_CANCEL' })}>
             继续这一局
           </button>
         </ConfirmModal>
@@ -230,7 +237,7 @@ function RitualClient() {
           >
             {COPY.resumeRestart}
           </button>
-          <button type="button" onClick={() => setRestartAsk(false)}>
+          <button type="button" data-safe-focus onClick={() => setRestartAsk(false)}>
             {COPY.resumeContinue}
           </button>
         </ConfirmModal>
