@@ -37,3 +37,21 @@
 .grid a:hover {
   color: var(--candle);
 }
+
+.search {
+  display: block;
+  margin: 0 0 24px;
+}
+
+.search input {
+  width: min(100%, 320px);
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(196, 163, 90, 0.28);
+  background: transparent;
+  color: var(--parchment);
+}
+
+.search input::placeholder {
+  color: var(--ash);
+}

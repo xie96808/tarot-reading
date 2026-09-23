@@ -18,9 +18,9 @@ describe('reading golden fixture (appendix cards)', () => {
       'cups_08',
       'pents_queen',
     ]);
-    expect(doc.positions[0].meaning).toBe(CARDS['00_the_fool'].upright.meaning);
-    expect(doc.positions[1].meaning).toBe(CARDS.cups_08.upright.meaning);
-    expect(doc.positions[2].meaning).toBe(CARDS.pents_queen.reversed.meaning);
+    expect(doc.positions[0].meaning).toBe(`在「过去」这个位置上，${CARDS['00_the_fool'].upright.meaning}`);
+    expect(doc.positions[1].meaning).toBe(`在「现在」这个位置上，${CARDS.cups_08.upright.meaning}`);
+    expect(doc.positions[2].meaning).toBe(`在「未来」这个位置上，${CARDS.pents_queen.reversed.meaning}`);
     expect(new Set(usedCardIds(doc))).toEqual(
       new Set(['00_the_fool', 'cups_08', 'pents_queen']),
     );

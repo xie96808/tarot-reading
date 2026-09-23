@@ -170,10 +170,11 @@ export function reduce(state: RitualSession, event: RitualEvent): RitualSession 
       }
       if (event.type === 'SET_VIEW') return { ...state, view: event.view };
       if (event.type === 'CLOSE_ACK') {
+        const keepPrivate = state.savePrivate;
         const receipt: ReadingReceipt = {
           sessionId: state.sessionId,
           spreadId: state.spreadId,
-          question: state.question,
+          question: keepPrivate ? state.question : '',
           reversals: state.reversals,
           cutIndex: state.cutIndex,
           commitShort: state.commitShort,
@@ -182,11 +183,12 @@ export function reduce(state: RitualSession, event: RitualEvent): RitualSession 
           completedAt: Date.now(),
           saved: state.saveDevice,
           savePrivate: state.savePrivate,
-          note: state.note,
+          note: keepPrivate ? state.note : '',
         };
         return {
           sessionId: state.sessionId,
           stage: 'close',
+          // Session resume/share UI can still show the live question; receipt is what history persists.
           question: state.question,
           spreadId: state.spreadId,
           reversals: state.reversals,

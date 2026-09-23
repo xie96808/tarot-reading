@@ -1,5 +1,5 @@
 export const SITE_NAME = '烛下塔罗';
-export const SITE_TAGLINE = 'A quiet table for the RWS deck';
+export const SITE_TAGLINE = '一盏灯下的韦特牌桌';
 export const SITE_URL = process.env.SITE_URL ?? 'https://tarot.xieyw.top';
 export const ICP_NUMBER = process.env.ICP_NUMBER ?? '';
 export const DECK_VERSION = 'rws-1';

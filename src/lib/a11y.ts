@@ -2,7 +2,14 @@ export function focusableIn(root: HTMLElement): HTMLElement[] {
   const nodes = root.querySelectorAll<HTMLElement>(
     'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
   );
-  return [...nodes].filter((node) => !node.hasAttribute('hidden'));
+  return [...nodes].filter((node) => {
+    if (node.hasAttribute('hidden') || node.getAttribute('aria-hidden') === 'true') return false;
+    if (node.closest('[hidden], [aria-hidden="true"], [inert]')) return false;
+    const style = typeof window !== 'undefined' ? window.getComputedStyle?.(node) : null;
+    if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+    if ('disabled' in node && (node as HTMLButtonElement).disabled) return false;
+    return true;
+  });
 }
 
 export function trapTab(event: KeyboardEvent, root: HTMLElement): void {

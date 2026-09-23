@@ -13,6 +13,7 @@ describe('deal timing', () => {
     expect(dealDurationMs(1, false)).toBe(MOTION.dealFlightMs + 80);
     expect(dealDurationMs(3, false)).toBe(MOTION.dealFlightMs + MOTION.dealGapThreeMs * 2 + 80);
     expect(dealDurationMs(10, false)).toBe(MOTION.dealFlightMs + MOTION.dealGapCelticMs * 9 + 80);
+    expect(MOTION.dealCapMs).toBeLessThanOrEqual(1800);
     expect(dealDurationMs(10, false)).toBeLessThanOrEqual(MOTION.dealCapMs);
     expect(dealDurationMs(10, true)).toBe(0);
   });

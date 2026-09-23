@@ -20,3 +20,15 @@ export function filterDeck(cards: readonly CardLexicon[], filter: DeckFilter): C
 export function isDeckFilter(value: string): value is DeckFilter {
   return DECK_FILTERS.some((item) => item.id === value);
 }
+
+export function searchDeck(cards: readonly CardLexicon[], query: string): CardLexicon[] {
+  const raw = query.trim();
+  if (!raw) return [...cards];
+  const lower = raw.toLowerCase();
+  return cards.filter((card) => {
+    if (card.nameZh.includes(raw)) return true;
+    if (card.nameEn.toLowerCase().includes(lower)) return true;
+    if (card.id.toLowerCase().includes(lower)) return true;
+    return card.upright.keywords.some((kw) => kw.includes(raw) || kw.toLowerCase().includes(lower));
+  });
+}

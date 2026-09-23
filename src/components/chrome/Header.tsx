@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { COPY } from '@/i18n/zh-CN';
 import { shouldConfirmLeave } from '@/lib/nav-guard';
+import { loadSession } from '@/lib/storage';
 import styles from './Header.module.css';
 
 export function Header() {
@@ -11,7 +12,8 @@ export function Header() {
   const router = useRouter();
 
   function go(href: string) {
-    if (shouldConfirmLeave(pathname, href) && !window.confirm(COPY.navLeaveHint)) return;
+    const stage = pathname.startsWith('/read') ? loadSession()?.stage ?? null : null;
+    if (shouldConfirmLeave(pathname, href, stage) && !window.confirm(COPY.navLeaveHint)) return;
     router.push(href);
   }
 

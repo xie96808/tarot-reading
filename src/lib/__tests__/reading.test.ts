@@ -94,4 +94,69 @@ describe('relation rules', () => {
     expect(doc.synthesis).toContain('愚者');
     expect(doc.synthesis).not.toContain('圣杯');
   });
+
+
+  it('prefers R4 over R3 when only one side is a charged mode', () => {
+    const flow = card({
+      id: '00_the_fool',
+      nameZh: '愚者',
+      upright: {
+        keywords: ['开端', '轻装', '信任'],
+        meaning: 'm',
+        reflection: 'q？',
+        theme: 'begin',
+        mode: 'flow',
+      },
+    });
+    const blocked = card({
+      id: 'cups_08',
+      nameZh: '圣杯八',
+      upright: {
+        keywords: ['离开', '放下', '转向'],
+        meaning: 'm',
+        reflection: 'q？',
+        theme: 'act',
+        mode: 'blocked',
+      },
+    });
+    const left = {
+      positionId: 'past',
+      positionNameZh: '过去',
+      frameZh: '',
+      cardId: flow.id,
+      nameZh: flow.nameZh,
+      orientation: 'upright' as const,
+      keywords: flow.upright.keywords,
+      meaning: 'm',
+      reflection: 'q？',
+    };
+    const right = {
+      ...left,
+      positionId: 'present',
+      positionNameZh: '现在',
+      cardId: blocked.id,
+      nameZh: blocked.nameZh,
+      keywords: blocked.upright.keywords,
+    };
+    const hit = relationForEdge('three', left, right, { [flow.id]: flow, [blocked.id]: blocked });
+    expect(hit.ruleId).toBe('R4_BRIDGE');
+  });
+
+  it('weaves position into meaning and softens reverse majority copy', () => {
+    const a = card({ id: '00_the_fool', nameZh: '愚者' });
+    const b = card({ id: 'cups_08', nameZh: '圣杯八' });
+    const c = card({ id: 'pents_queen', nameZh: '星币王后' });
+    const draws: Draw[] = [
+      { positionId: 'past', cardId: a.id, orientation: 'reversed' },
+      { positionId: 'present', cardId: b.id, orientation: 'reversed' },
+      { positionId: 'future', cardId: c.id, orientation: 'upright' },
+    ];
+    const doc = composeReading('three', draws, { [a.id]: a, [b.id]: b, [c.id]: c });
+    expect(doc.positions[0].meaning.startsWith('在「过去」这个位置上，')).toBe(true);
+    expect(doc.positions[0].frameZh.length).toBeGreaterThan(0);
+    const reverseStat = doc.stats.find((s) => s.kind === 'reversed');
+    expect(reverseStat?.text).toContain('逆位偏多');
+    expect(reverseStat?.text).not.toContain('内在、受阻或过度');
+  });
+
 });

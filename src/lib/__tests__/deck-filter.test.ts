@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CARD_LEXICON_LIST } from '@/data/lexicons/zh-1';
-import { DECK_FILTERS, filterDeck } from '@/lib/deck-filter';
+import { DECK_FILTERS, filterDeck, searchDeck } from '@/lib/deck-filter';
 
 describe('deck catalog filters', () => {
   it('keeps 78, 22 majors, and 14 of each suit', () => {
@@ -19,4 +19,13 @@ describe('deck catalog filters', () => {
       'wands',
     ]);
   });
+
+  it('filters by Chinese name, English name, or id', () => {
+    const fools = searchDeck(CARD_LEXICON_LIST, '愚者');
+    expect(fools.some((card) => card.id === '00_the_fool')).toBe(true);
+    const byEn = searchDeck(CARD_LEXICON_LIST, 'fool');
+    expect(byEn.some((card) => card.id === '00_the_fool')).toBe(true);
+    expect(searchDeck(CARD_LEXICON_LIST, '  ')).toHaveLength(78);
+  });
+
 });
