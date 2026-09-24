@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
 import { CARDS } from '@/data/lexicons/zh-1';
 import type { Draw } from '@/lib/shuffle';
@@ -34,7 +34,9 @@ type TableauProps = {
   onReveal?: (positionId: string) => void;
   dealing?: boolean;
   sceneVisuals?: Partial<Record<string, SceneVisual>> | null;
+  sceneInstant?: Partial<Record<string, boolean>> | null;
   revealLocked?: boolean;
+  pauseSlot?: ReactNode;
 };
 
 export function Tableau({
@@ -47,7 +49,9 @@ export function Tableau({
   onReveal,
   dealing = false,
   sceneVisuals = null,
+  sceneInstant = null,
   revealLocked = false,
+  pauseSlot = null,
 }: TableauProps) {
   const [selection, setSelection] = useState({ revealed, position: selectedPositionId, animate: false });
   if (selection.revealed !== revealed || selection.position !== selectedPositionId) {
@@ -126,6 +130,7 @@ export function Tableau({
         )}
         alt={cardAlt(selected.positionId, selected.cardId, selected.orientation, selectedMeta.nameZh, selectedRevealed)}
         label={selectedMeta.nameZh}
+        sceneInstant={sceneInstant?.[selected.positionId] === true}
         onReveal={revealLocked || selectedRevealed || !onReveal ? undefined : () => onReveal(selected.positionId)}
       />
       <div className={styles.stepNav}>
@@ -213,7 +218,12 @@ export function Tableau({
 
   return (
     <div ref={board} style={boardVars}>
-      {!dealing ? stepped : null}
+      {!dealing ? (
+        <div className={styles.mobileColumn}>
+          {stepped}
+          {!desktop ? pauseSlot : null}
+        </div>
+      ) : null}
       <div className={`${styles.row} ${dealing ? styles.dealingBoard : ''}`} role="list">
         {spread.positions.map((position) => {
           const draw = draws.find((item) => item.positionId === position.id)!;
@@ -241,12 +251,14 @@ export function Tableau({
                 dealDelayMs={dealDelayMs(position.drawOrder - 1, count)}
                 alt={cardAlt(position.id, draw.cardId, draw.orientation, position.nameZh, isRevealed)}
                 label={position.nameZh}
+                sceneInstant={sceneInstant?.[position.id] === true}
                 onReveal={revealLocked || isRevealed || !onReveal ? undefined : () => onReveal(position.id)}
               />
             </div>
           );
         })}
       </div>
+      {desktop ? <div className={styles.desktopPause}>{pauseSlot}</div> : null}
     </div>
   );
 }

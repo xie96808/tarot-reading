@@ -102,6 +102,8 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   const [actionsReady, setActionsReady] = useState(false);
   const [readyPauseKey, setReadyPauseKey] = useState<string | null>(null);
   const [shownMeaning, setShownMeaning] = useState<string | null>(null);
+  const [snapSession, setSnapSession] = useState<string | null>(null);
+  const [restoredRevealed, setRestoredRevealed] = useState<ReadonlySet<string>>(() => new Set());
 
   const dispatch = useCallback((event: Parameters<typeof reduce>[1]) => {
     setState((current) => reduce(current, event));
@@ -262,6 +264,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     if (actionsReady) setActionsReady(false);
   }
   const sceneId = state.sceneId;
+  const openedAtResume = snapSession === state.sessionId ? restoredRevealed : null;
   const sceneVisuals =
     sceneLive && sceneId && (state.stage === 'reveal' || state.stage === 'read')
       ? Object.fromEntries(
@@ -278,6 +281,17 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
           ]),
         )
       : null;
+  const sceneInstant =
+    sceneVisuals === null
+      ? null
+      : Object.fromEntries(
+          (['past', 'present', 'future'] as const).map((positionId) => [
+            positionId,
+            state.stage === 'read' ||
+              (pauseRestored && pause?.positionId === positionId) ||
+              Boolean(openedAtResume?.has(positionId)),
+          ]),
+        );
   const pauseDraw = pause && 'draws' in state ? state.draws.find((draw) => draw.positionId === pause.positionId) : undefined;
   const pauseOffer = pause && pauseDraw && sceneId ? lookupPauseOffer(sceneId, pauseDraw.cardId, pauseDraw.orientation, pause.index) : null;
   const previousKind = pause?.index === 2 ? (state.pauseAnswers.find((item) => item.index === 1)?.kind ?? null) : null;
@@ -434,15 +448,27 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                 autoFocus
                 onClick={() => {
                   const next = pendingResume;
+                  const revealedNow = 'revealed' in next ? next.revealed : [];
                   if (next.stage === 'reveal' && next.pause) {
                     setRestoredPauseKey(`${next.sessionId}:${next.pause.index}`);
                     setInstantMeaning(false);
+                    setSnapSession(next.sessionId);
+                    setRestoredRevealed(new Set(revealedNow));
                   } else if (next.stage === 'reveal' && next.pauseAnswers.length > 0) {
                     setRestoredPauseKey(null);
                     setInstantMeaning(true);
+                    setSnapSession(next.sessionId);
+                    setRestoredRevealed(new Set(revealedNow));
+                  } else if (next.stage === 'read' || next.stage === 'reveal') {
+                    setRestoredPauseKey(null);
+                    setInstantMeaning(false);
+                    setSnapSession(next.sessionId);
+                    setRestoredRevealed(new Set(revealedNow));
                   } else {
                     setRestoredPauseKey(null);
                     setInstantMeaning(false);
+                    setSnapSession(null);
+                    setRestoredRevealed(new Set());
                   }
                   setPendingResume(null);
                   setRestartAsk(false);
@@ -741,7 +767,25 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                 faces={faces}
                 dealing={state.stage === 'deal'}
                 sceneVisuals={sceneVisuals}
+                sceneInstant={sceneInstant}
                 revealLocked={navigationLocked}
+                pauseSlot={
+                  SCENE_PAUSE_ENABLED && pause && pauseOffer && sceneId ? (
+                    <PauseSheet
+                      sceneId={sceneId}
+                      offer={pauseOffer}
+                      phase={pause.phase}
+                      custom={pause.custom}
+                      previous={previousKind}
+                      actionsEnabled={choicesReady}
+                      onChoose={(actionId) => dispatch({ type: 'CHOOSE_PAUSE', actionId })}
+                      onCustom={(custom) => dispatch({ type: 'SET_PAUSE_CUSTOM', custom })}
+                      onConfirm={() => dispatch({ type: 'CONFIRM_PAUSE' })}
+                      onSkip={() => dispatch({ type: 'SKIP_PAUSE' })}
+                      onRevert={() => dispatch({ type: 'REVERT_PAUSE' })}
+                    />
+                  ) : null
+                }
                 onSelect={(positionId) => dispatch({ type: 'SELECT_POSITION', positionId })}
                 onReveal={
                   state.stage === 'reveal' && !navigationLocked
@@ -751,21 +795,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               />
             </TableScene>
           </div>
-          {SCENE_PAUSE_ENABLED && pause && pauseOffer && sceneId ? (
-            <PauseSheet
-              sceneId={sceneId}
-              offer={pauseOffer}
-              phase={pause.phase}
-              custom={pause.custom}
-              previous={previousKind}
-              actionsEnabled={choicesReady}
-              onChoose={(actionId) => dispatch({ type: 'CHOOSE_PAUSE', actionId })}
-              onCustom={(custom) => dispatch({ type: 'SET_PAUSE_CUSTOM', custom })}
-              onConfirm={() => dispatch({ type: 'CONFIRM_PAUSE' })}
-              onSkip={() => dispatch({ type: 'SKIP_PAUSE' })}
-              onRevert={() => dispatch({ type: 'REVERT_PAUSE' })}
-            />
-          ) : null}
           {SCENE_PAUSE_ENABLED && futureOpen && sceneClose && futureReading && sceneId ? (
             <SceneFutureBeat
               sceneId={sceneId}

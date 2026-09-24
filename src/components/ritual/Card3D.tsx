@@ -24,6 +24,8 @@ type Card3DProps = {
   dealing?: boolean;
   animateOnMount?: boolean;
   visual?: SceneVisual;
+  /** Snap only for a restored pause draft or a card already open on read. */
+  sceneInstant?: boolean;
 };
 
 type SceneFrom = SceneVisual | 'mount';
@@ -41,9 +43,11 @@ export function Card3D({
   dealing = false,
   animateOnMount = false,
   visual,
+  sceneInstant = false,
 }: Card3DProps) {
   const reduced = useReducedMotion();
   const scene = visual !== undefined;
+  const snap = reduced || sceneInstant;
   const [presentation, setPresentation] = useState({
     revealed,
     flipped: revealed && !animateOnMount,
@@ -55,12 +59,13 @@ export function Card3D({
   if (!scene && presentation.revealed !== revealed) {
     setPresentation({ revealed, flipped: false, view: 'as-dealt', manual: false, justRevealed: revealed });
   }
-  const pose = useScenePose(visual, reduced);
+  const pose = useScenePose(visual, snap);
+  const introHold = useIntroHold(visual, snap);
   const [timedOpen, setTimedOpen] = useState<{ visual: SceneVisual | undefined; open: boolean }>({ visual, open: false });
   if (timedOpen.visual !== visual) setTimedOpen({ visual, open: false });
-  const openFace = sceneFaceOpen(visual, pose.instant || reduced, timedOpen.open);
+  const openFace = sceneFaceOpen(visual, pose.instant, timedOpen.open);
   const dealtNow = scene && (visual === 'back' || visual === 'door-partial' || visual === 'hand-partial');
-  const readableNow = openFace && reversed && (pose.instant || reduced);
+  const readableNow = openFace && reversed && pose.instant;
   if (!presentation.manual && dealtNow && presentation.view !== 'as-dealt') {
     setPresentation((current) => ({ ...current, view: 'as-dealt' }));
   } else if (!presentation.manual && readableNow && presentation.view !== 'readable') {
@@ -83,27 +88,27 @@ export function Card3D({
   }, [revealed, reversed, scene]);
 
   useEffect(() => {
-    if (!scene || !visual) return;
+    if (introHold || !scene || !visual) return;
     if (visual === 'back' || visual === 'door-partial' || visual === 'hand-partial') return;
-    if (pose.instant || reduced) return;
+    if (pose.instant) return;
     const beats = sceneBeatDurations(false);
     const ms = visual === 'door-full'
       ? (pose.from === 'door-partial' ? beats.completeMs : beats.seamMs + beats.partialFlipMs)
       : beats.settleMs;
     const timer = window.setTimeout(() => setTimedOpen({ visual, open: true }), ms);
     return () => window.clearTimeout(timer);
-  }, [scene, visual, pose.instant, pose.from, reduced]);
+  }, [introHold, scene, visual, pose.instant, pose.from]);
 
   useEffect(() => {
     // Partial must not use autoUprightDelayMs. Upright starts only after the face is fully open.
     if (!scene || !reversed || !openFace) return;
     if (visual !== 'door-full' && visual !== 'hand-settled') return;
-    if (pose.instant || reduced) return;
+    if (pose.instant) return;
     const timer = window.setTimeout(() => {
       setPresentation((current) => current.manual ? current : { ...current, view: 'readable' });
     }, MOTION.uprightPauseMs);
     return () => window.clearTimeout(timer);
-  }, [scene, reversed, openFace, visual, pose.instant, reduced]);
+  }, [scene, reversed, openFace, visual, pose.instant]);
 
   const beats = sceneBeatDurations(reduced);
   const showFace = scene ? visual !== 'back' : revealed;
@@ -124,15 +129,32 @@ export function Card3D({
   const innerClass = scene
     ? `${styles.inner} ${poseName === 'partial' && !reduced ? styles.partial : ''} ${openFace && (visual === 'door-full' || visual === 'hand-settled') ? styles.revealed : ''}`
     : `${styles.inner} ${flipped ? styles.revealed : ''}`;
+  const hand = visual === 'hand-partial' || visual === 'hand-settled';
+  const flip = (
+    <div className={styles.flip}>
+      <span className={`${styles.glow} ${!scene && flipped && presentation.justRevealed ? styles.glowing : ''}`} aria-hidden="true" />
+      <div className={innerClass} data-pose={poseName}>
+        <div className={styles.back}>
+          <CardBack alt={showFace ? '' : alt} />
+        </div>
+        <div className={styles.front}>
+          <div className={styles.orient} style={{ transform: `rotate(${rotation}deg)` }}>
+            {showFace ? urls ? <CardFace key={urls.digest} urls={urls} sizes={sizes} alt={alt} /> : <div className={styles.waiting} role="status">正在准备牌面…</div> : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div
       data-deal-card={dealing || undefined}
       data-card-visual
       data-visual={visual}
-      data-scene-motion={scene ? (pose.instant || reduced ? 'instant' : 'play') : undefined}
+      data-scene-motion={scene ? (pose.instant ? 'instant' : 'play') : undefined}
       data-scene-from={scene ? pose.from : undefined}
-      data-seam={seam ? 'open' : undefined}
+      data-scene-hold={introHold ? 'true' : undefined}
+      data-seam={seam && !introHold ? 'open' : undefined}
       data-reduced={scene && reduced ? 'true' : undefined}
       className={`${styles.slot} ${crossing ? styles.crossing : ''} ${dealing ? styles.dealing : ''}`}
       style={
@@ -154,22 +176,14 @@ export function Card3D({
         } as CSSProperties
       }
     >
-      {visual === 'hand-partial' || visual === 'hand-settled' ? (
-        <div className={styles.palm} data-part="palm" aria-hidden="true" />
-      ) : null}
-      <div className={styles.flip}>
-        <span className={`${styles.glow} ${!scene && flipped && presentation.justRevealed ? styles.glowing : ''}`} aria-hidden="true" />
-        <div className={innerClass} data-pose={poseName}>
-          <div className={styles.back}>
-            <CardBack alt={showFace ? '' : alt} />
-          </div>
-          <div className={styles.front}>
-            <div className={styles.orient} style={{ transform: `rotate(${rotation}deg)` }}>
-              {showFace ? urls ? <CardFace key={urls.digest} urls={urls} sizes={sizes} alt={alt} /> : <div className={styles.waiting} role="status">正在准备牌面…</div> : null}
-            </div>
-          </div>
+      {hand ? (
+        <div className={styles.faceBox}>
+          <div className={styles.palm} data-part="palm" aria-hidden="true" />
+          {flip}
         </div>
-      </div>
+      ) : (
+        flip
+      )}
       {label || showBadge ? (
         <p className={styles.label} data-part="label">
           {label}
@@ -206,18 +220,32 @@ function sceneFaceOpen(visual: SceneVisual | undefined, instant: boolean, timed:
   return instant || timed;
 }
 
-function useScenePose(visual: SceneVisual | undefined, reduced: boolean): { from: SceneFrom; instant: boolean } {
+function useScenePose(visual: SceneVisual | undefined, snap: boolean): { from: SceneFrom; instant: boolean } {
   const [pose, setPose] = useState<{ visual: SceneVisual | undefined; from: SceneFrom; instant: boolean }>(() => ({
     visual,
-    from: 'mount',
-    instant: reduced || (visual !== undefined && visual !== 'back'),
+    from: snap || !visual || visual === 'back' ? 'mount' : 'back',
+    instant: snap,
   }));
-  if (visual !== pose.visual || (reduced && !pose.instant)) {
+  if (visual !== pose.visual || pose.instant !== snap) {
+    const previous = pose.visual;
     setPose({
       visual,
-      from: pose.visual === undefined ? 'mount' : pose.visual,
-      instant: reduced || (pose.visual === undefined && visual !== undefined && visual !== 'back'),
+      from: previous && previous !== 'back' ? previous : 'back',
+      instant: snap,
     });
   }
   return pose;
+}
+
+function useIntroHold(visual: SceneVisual | undefined, snap: boolean): boolean {
+  const [holdFor, setHoldFor] = useState<SceneVisual | undefined>(() =>
+    !snap && visual !== undefined && visual !== 'back' ? visual : undefined,
+  );
+  const hold = !snap && holdFor === visual && visual !== undefined && visual !== 'back';
+  useEffect(() => {
+    if (!hold) return;
+    const frame = requestAnimationFrame(() => setHoldFor(undefined));
+    return () => cancelAnimationFrame(frame);
+  }, [hold]);
+  return hold;
 }
