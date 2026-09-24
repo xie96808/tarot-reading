@@ -93,7 +93,7 @@ export function Card3D({
         </div>
       </div>
       {label || (revealed && reversed) ? (
-        <p className={styles.label}>
+        <p className={styles.label} data-part="label">
           {label}
           {revealed && reversed ? (
             <span className={styles.badge} data-part="badge">
@@ -103,7 +103,7 @@ export function Card3D({
         </p>
       ) : null}
       {!revealed && onReveal ? (
-        <button type="button" className={styles.action} onClick={onReveal}>
+        <button type="button" className={styles.action} data-part="reveal" onClick={onReveal}>
           {COPY.revealAction}
         </button>
       ) : null}
@@ -111,6 +111,7 @@ export function Card3D({
         <button
           type="button"
           className={styles.action}
+          data-part="reveal"
           onClick={() => {
             setPresentation((current) => ({ ...current, manual: true, view: current.view === 'readable' ? 'as-dealt' : 'readable' }));
           }}
