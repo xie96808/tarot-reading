@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
-import { trapTab } from '@/lib/a11y';
+import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
 import styles from './RitualApp.module.css';
 
 export function ConfirmModal({
@@ -11,35 +10,37 @@ export function ConfirmModal({
   children: ReactNode;
   onCancel: () => void;
 }) {
-  const root = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDialogElement>(null);
   const previous = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     previous.current = document.activeElement as HTMLElement | null;
     const node = root.current;
-    // Prefer explicit safe focus; otherwise last button (continue/cancel), never destructive-first.
+    if (!node) return;
+    node.showModal();
     const safe =
-      node?.querySelector<HTMLElement>('[data-safe-focus]') ??
-      (node ? [...node.querySelectorAll<HTMLElement>('button')].at(-1) : null);
+      node.querySelector<HTMLElement>('[data-safe-focus]') ??
+      [...node.querySelectorAll<HTMLElement>('button')].at(-1);
     safe?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onCancel();
-        return;
-      }
-      if (node) trapTab(event, node);
+    const onCancelEvent = (event: Event) => {
+      event.preventDefault();
+      onCancel();
     };
-    window.addEventListener('keydown', onKey);
+    node.addEventListener('cancel', onCancelEvent);
     return () => {
-      window.removeEventListener('keydown', onKey);
+      node.removeEventListener('cancel', onCancelEvent);
+      node.close();
       previous.current?.focus?.();
     };
   }, [onCancel]);
 
+  function onMouseDown(event: MouseEvent<HTMLDialogElement>) {
+    if (event.target === event.currentTarget) onCancel();
+  }
+
   return (
-    <div ref={root} className={styles.modal} role="dialog" aria-modal="true">
+    <dialog ref={root} className={styles.modal} aria-modal="true" onMouseDown={onMouseDown}>
       {children}
-    </div>
+    </dialog>
   );
 }

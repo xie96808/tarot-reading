@@ -42,11 +42,13 @@ export default function HomePage() {
         <ul>
           {Object.values(SPREADS).map((spread) => (
             <li key={spread.id}>
-              <strong>{spread.nameZh}</strong>
-              <span>
-                {spread.titleZh} · {spread.blurbZh}
-              </span>
-              <em>{spread.durationZh}</em>
+              <Link href={`/read?spread=${spread.id}`}>
+                <strong>{spread.nameZh}</strong>
+                <span>
+                  {spread.titleZh} · {spread.blurbZh}
+                </span>
+                <em>{spread.durationZh}</em>
+              </Link>
             </li>
           ))}
         </ul>

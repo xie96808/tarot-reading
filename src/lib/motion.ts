@@ -55,6 +55,11 @@ export function autoUprightDelayMs(reversed: boolean, reduced: boolean): number 
   return MOTION.flipMs + MOTION.uprightPauseMs;
 }
 
+export function cutProportion(cutIndex: number): { top: number; bottom: number; topPct: number } | null {
+  if (!Number.isInteger(cutIndex) || cutIndex < 1 || cutIndex > 77) return null;
+  return { top: cutIndex, bottom: 78 - cutIndex, topPct: cutIndex / 78 };
+}
+
 export function visibleCutCounts(cutIndex: number): { top: number; bottom: number } {
   const topRaw = Math.min(77, Math.max(1, cutIndex));
   const bottomRaw = 78 - topRaw;

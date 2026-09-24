@@ -8,6 +8,10 @@ describe('method and privacy copy', () => {
     expect(about).toContain('密码学随机数');
     expect(about).toContain('逆位不是坏兆');
     expect(about).toContain('即时危险');
+    expect(about).toContain('12356');
+    expect(about).toContain('120');
+    expect(about).toContain('110');
+    expect(about).toContain('几何纹章');
   });
 
   it('states local history, encoding, and no question logging', () => {
@@ -15,5 +19,14 @@ describe('method and privacy copy', () => {
     expect(privacy).toContain('最多 20 条');
     expect(privacy).toContain('不是加密');
     expect(privacy).toContain('不记录问题原文');
+  });
+
+  it('preview names the three sample faces instead of card backs', () => {
+    const preview = readFileSync(path.join(process.cwd(), 'src/app/read/preview/page.tsx'), 'utf8');
+    expect(preview).toContain('CardFaceStatic');
+    expect(preview).toContain('00_the_fool');
+    expect(preview).toContain('cups_08');
+    expect(preview).toContain('pents_queen');
+    expect(preview).not.toContain('CardBack');
   });
 });

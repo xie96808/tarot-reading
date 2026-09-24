@@ -1,10 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { COPY } from '@/i18n/zh-CN';
-import { shouldConfirmLeave } from '@/lib/nav-guard';
-import { loadSession } from '@/lib/storage';
+import { ritualProgress, shouldConfirmLeave, startNavAction } from '@/lib/nav-guard';
+import { clearSession, loadSession } from '@/lib/storage';
 import styles from './Header.module.css';
 
 export function Header() {
@@ -13,6 +12,22 @@ export function Header() {
 
   function go(href: string) {
     const stage = pathname.startsWith('/read') ? loadSession()?.stage ?? null : null;
+    if (href === '/read') {
+      const action = startNavAction({
+        fromPath: pathname,
+        toPath: '/read',
+        progress: ritualProgress(stage),
+      });
+      if (action === 'confirm-restart') {
+        if (!window.confirm(COPY.resumeRestartConfirm)) return;
+        clearSession();
+        window.dispatchEvent(new Event('tarot:restart'));
+        if (pathname !== '/read') router.push('/read');
+        return;
+      }
+      if (pathname !== '/read') router.push('/read');
+      return;
+    }
     if (shouldConfirmLeave(pathname, href, stage) && !window.confirm(COPY.navLeaveHint)) return;
     router.push(href);
   }
@@ -23,12 +38,14 @@ export function Header() {
         {COPY.siteName}
       </button>
       <nav className={styles.nav} aria-label="主导航">
-        <Link href="/read">{COPY.navStart}</Link>
+        <button type="button" onClick={() => go('/read')}>
+          {COPY.navStart}
+        </button>
         <button type="button" onClick={() => go('/deck')}>
           {COPY.navDeck}
         </button>
         <button type="button" onClick={() => go('/about')}>
-          {COPY.navAbout}
+          {COPY.navMethod}
         </button>
       </nav>
     </header>

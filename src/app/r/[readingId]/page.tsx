@@ -2,9 +2,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { decodeReading } from '@/lib/reading-codec';
 import { composeReading } from '@/lib/reading';
+import { isCardId } from '@/data/card-ids';
 import { CARDS } from '@/data/lexicons/zh-1';
 import { SPREADS } from '@/data/lexicons/zh-1/spreads';
-import { COPY } from '@/i18n/zh-CN';
+import { CardFaceStatic } from '@/components/deck/CardFaceStatic';
 import { sharePageMeta } from '@/lib/share-meta';
 import { ReadingView } from '@/components/ritual/ReadingView';
 
@@ -34,15 +35,26 @@ export default async function ReadingPage({ params }: Props) {
   const decoded = decodeReading(decodeURIComponent(readingId));
   if (!decoded.ok) notFound();
   const payload = decoded.payload;
-  const doc = composeReading(payload.spreadId, payload.draws, CARDS);
+  const doc = composeReading(payload.spreadId, payload.draws, CARDS, payload.q ?? '');
   const spread = SPREADS[payload.spreadId];
   return (
     <main style={{ maxWidth: 800, margin: '0 auto', padding: '32px 20px 80px' }}>
       <p style={{ color: 'var(--candle)', letterSpacing: '0.2em' }}>本局记录</p>
       <h1>{spread.nameZh}</h1>
       <p>链接由浏览器生成，可复现所列结果，未验证抽牌来源。</p>
-      <ReadingView question={payload.q ?? ''} doc={doc} />
-      <p>{COPY.footerDisclaimer}</p>
+      <ul style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, padding: 0, listStyle: 'none' }}>
+        {doc.positions.map((position) => (
+          <li key={position.positionId}>
+            {isCardId(position.cardId) ? (
+              <CardFaceStatic cardId={position.cardId} alt={`${position.positionNameZh} ${position.nameZh}`} width="100%" />
+            ) : null}
+            <p>
+              {position.positionNameZh} · {position.nameZh}（{position.orientation === 'reversed' ? '逆位' : '正位'}）
+            </p>
+          </li>
+        ))}
+      </ul>
+      <ReadingView doc={doc} />
     </main>
   );
 }

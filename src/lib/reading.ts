@@ -29,11 +29,27 @@ export type PositionReading = {
 
 export type ReadingDocument = {
   spreadId: SpreadId;
+  question: string;
+  framing: string;
   positions: PositionReading[];
   relations: RelationHit[];
   stats: StatLine[];
   synthesis: string;
   takeaway: string;
+};
+
+export const CELTIC_READING_GROUPS = [
+  { id: 'core', title: '当下核心', positionIds: ['present', 'challenge'], edgeIds: ['present->challenge'] },
+  { id: 'path', title: '来处与走向', positionIds: ['foundation', 'past', 'crown', 'future'], edgeIds: ['foundation->present', 'past->future', 'crown->outcome'] },
+  { id: 'people', title: '内外视角', positionIds: ['self', 'environment'], edgeIds: ['self->environment'] },
+  { id: 'close', title: '条件性收束', positionIds: ['hopes_fears', 'outcome'], edgeIds: ['hopes_fears->outcome'] },
+] as const;
+
+export type ReadingGroup = {
+  id: string;
+  title: string;
+  positions: PositionReading[];
+  relations: RelationHit[];
 };
 
 const THEME_ZH: Record<Theme, string> = {
@@ -136,7 +152,7 @@ export function relationForEdge(
       ruleId: 'R2_TENSION',
       sourcePositionIds,
       sourceCardIds,
-      text: `一端关乎${THEME_ZH[leftM.theme]}，另一端关乎${THEME_ZH[rightM.theme]}；先读作需要协调的两种需求，而不是互相抵消。`,
+      text: `${left.positionNameZh}关乎${THEME_ZH[leftM.theme]}，${right.positionNameZh}关乎${THEME_ZH[rightM.theme]}；先读作需要协调的两种需求，而不是互相抵消。`,
     };
   }
   // R3 only when both ends are charged modes that differ — avoids flow↔anything sweeping to R3.
@@ -164,6 +180,10 @@ export function relationForEdge(
   };
 }
 
+function named(draws: Draw[], cards: Record<string, CardLexicon>, pick: (draw: Draw) => boolean): string {
+  return draws.filter(pick).map((draw) => cards[draw.cardId].nameZh).join('、');
+}
+
 export function collectStats(
   spreadId: SpreadId,
   draws: Draw[],
@@ -171,40 +191,81 @@ export function collectStats(
 ): StatLine[] {
   if (spreadId === 'single') return [];
   const n = draws.length;
-  const reversed = draws.filter((d) => d.orientation === 'reversed').length;
-  const majors = draws.filter((d) => cards[d.cardId]?.arcana === 'major').length;
+  const reversedDraws = draws.filter((d) => d.orientation === 'reversed');
+  const majorDraws = draws.filter((d) => cards[d.cardId]?.arcana === 'major');
   const counts: Record<string, number> = { fire: 0, water: 0, air: 0, earth: 0 };
   for (const draw of draws) counts[cards[draw.cardId].element] += 1;
   const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const uniqueMode = ranked[0][1] !== ranked[1][1] && ranked[0][1] >= 2;
   const candidates: StatLine[] = [];
-  if (reversed >= n / 2) {
+  if (reversedDraws.length >= n / 2) {
     candidates.push({
       kind: 'reversed',
-      text: '这组牌逆位偏多，可多留意各张自身的细微差别，而不必先统一成同一种语气。',
+      text: `这组 ${n} 张里有 ${reversedDraws.length} 张逆位（${named(draws, cards, (d) => d.orientation === 'reversed')}），读作较多内在、受阻或过度的表达，仍需结合各牌分别理解。`,
     });
   }
-  if (majors >= n / 2) {
+  if (majorDraws.length >= n / 2) {
     candidates.push({
       kind: 'majors',
-      text: '这组象征更偏向阶段性主题，不只是日常细节。',
+      text: `这组 ${n} 张里有 ${majorDraws.length} 张大阿尔卡纳（${named(draws, cards, (d) => cards[d.cardId].arcana === 'major')}），象征更偏向阶段性主题，不只是日常细节。`,
     });
   }
   if (uniqueMode) {
     const element = ranked[0][0] as keyof typeof ELEMENT_ZH;
+    const elementNames = named(draws, cards, (d) => cards[d.cardId].element === element);
     candidates.push({
       kind: 'element',
-      text: `元素更偏向${ELEMENT_ZH[element]}。`,
+      text: `元素更偏向${ELEMENT_ZH[element]}（${ranked[0][1]} 张：${elementNames}）。`,
     });
   }
   return candidates.slice(0, 2);
+}
+
+export function framingLine(question: string): string {
+  const q = question.trim();
+  if (!q) return '这次没有写下问题。下面是按牌位读这组牌，不是对某个具体问题的回答。';
+  return `你问的是「${q}」。下面不回答这个问题，只把这组牌当作看它的一副镜片：牌义来自词库，不根据问题改写。`;
+}
+
+export function takeawayLine(question: string, focus: PositionReading): string {
+  const q = question.trim();
+  if (!q) return focus.reflection;
+  const orient = focus.orientation === 'reversed' ? '逆位' : '正位';
+  return `若把「${q}」放在「${focus.positionNameZh}」这个位置上看，${focus.nameZh}（${orient}）留给你的仍是词库里的这句自问。「${focus.reflection}」牌没有根据问题改写这句，也没有替你作答。`;
+}
+
+export const RULE_WHY_ZH: Record<RelationHit['ruleId'], string> = {
+  R1_REPEAT: '这两张牌的主题标签相同，所以读成同一个主题在两个位置重复出现，而不是两件无关的事。',
+  R2_TENSION: '这两张牌的主题是一对需要协调的张力，所以先并置两种需求，不把它们读成互相抵消。',
+  R3_TURN: '这两张牌的表达方式不同，且至少一端偏向内在、受阻或过度，所以读成表达方式的转换。',
+  R4_BRIDGE: '这两张牌没有命中重复、张力或转换，所以只把两个位置的关键词并置，不合成同一个答案。',
+};
+
+export function whyForRelation(rel: RelationHit, positions: PositionReading[]): string {
+  const left = positions.find((p) => p.positionId === rel.sourcePositionIds[0])?.positionNameZh;
+  const right = positions.find((p) => p.positionId === rel.sourcePositionIds[1])?.positionNameZh;
+  return `${left}与${right}：${RULE_WHY_ZH[rel.ruleId]}`;
+}
+
+export function readingGroups(doc: ReadingDocument): ReadingGroup[] | null {
+  if (doc.spreadId !== 'celtic') return null;
+  const byPos = Object.fromEntries(doc.positions.map((position) => [position.positionId, position]));
+  const byEdge = Object.fromEntries(doc.relations.map((rel) => [rel.edgeId, rel]));
+  return CELTIC_READING_GROUPS.map((group) => ({
+    id: group.id,
+    title: group.title,
+    positions: group.positionIds.map((id) => byPos[id]),
+    relations: group.edgeIds.map((id) => byEdge[id]),
+  }));
 }
 
 export function composeReading(
   spreadId: SpreadId,
   draws: Draw[],
   cards: Record<string, CardLexicon>,
+  question: string,
 ): ReadingDocument {
+  const trimmed = question.trim();
   const positions = buildPositionReadings(spreadId, draws, cards);
   const byId = Object.fromEntries(positions.map((p) => [p.positionId, p]));
   const spread = SPREADS[spreadId];
@@ -216,11 +277,13 @@ export function composeReading(
   const synthesis = buildSynthesis(spreadId, positions, relations, stats);
   return {
     spreadId,
+    question: trimmed,
+    framing: framingLine(trimmed),
     positions,
     relations,
     stats,
     synthesis,
-    takeaway: focus.reflection,
+    takeaway: takeawayLine(trimmed, focus),
   };
 }
 
@@ -232,23 +295,18 @@ function buildSynthesis(
 ): string {
   const statText = stats.map((s) => s.text).join('');
   if (spreadId === 'single') {
-    const p = positions[0];
-    return `${p.nameZh}被读作此刻的一股力量：${p.keywords.slice(0, 3).join('、')}。${statText}`.trim();
+    const focus = positions[0];
+    return `${focus.nameZh}被读作此刻的一股力量：${focus.keywords.slice(0, 3).join('、')}。${statText}`.trim();
   }
   if (spreadId === 'three') {
-    return `${relations.map((r) => r.text).join('')}${statText}`;
+    const body = relations.map((rel) => rel.text).join('\n');
+    return statText ? `${body}\n${statText}` : body;
   }
-  const groups = {
-    core: relations.filter((r) => r.edgeId.startsWith('present->') || r.edgeId.startsWith('foundation->present')),
-    path: relations.filter((r) => r.edgeId === 'past->future' || r.edgeId === 'crown->outcome' || r.edgeId === 'foundation->present'),
-    people: relations.filter((r) => r.edgeId === 'self->environment' || r.edgeId === 'hopes_fears->outcome'),
-    close: relations.filter((r) => r.edgeId.endsWith('->outcome')),
-  };
-  const core = groups.core.map((r) => r.text).join('');
-  const path = relations.filter((r) => r.edgeId === 'past->future' || r.edgeId === 'crown->outcome').map((r) => r.text).join('');
-  const people = relations.filter((r) => r.edgeId === 'self->environment').map((r) => r.text).join('');
-  const close = relations.filter((r) => r.edgeId === 'hopes_fears->outcome').map((r) => r.text).join('');
-  return `当下核心：${core}\n来处与走向：${path}\n内外视角：${people}\n条件性收束：${close}${statText ? `\n${statText}` : ''}`;
+  const body = CELTIC_READING_GROUPS.map((group) => {
+    const text = group.edgeIds.map((id) => relations.find((rel) => rel.edgeId === id)?.text ?? '').join('');
+    return `${group.title}：${text}`;
+  }).join('\n');
+  return statText ? `${body}\n${statText}` : body;
 }
 
 export function usedCardIds(doc: ReadingDocument): string[] {

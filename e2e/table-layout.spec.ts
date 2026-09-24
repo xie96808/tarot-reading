@@ -23,7 +23,7 @@ for (const width of [375, 390, 719, 720, 721, 768, 1023, 1024, 1440]) {
     await expect(page.locator('[data-cut-packet]')).toHaveCount(2);
     await expect(page.locator('[data-cut-packet]').first()).toBeVisible();
     await page.getByRole('button', { name: '让牌落在桌上' }).click();
-    const next = page.locator('main').getByRole('button', { name: '翻开这一张' }).last();
+    const next = page.locator('main').locator('[data-reveal="primary"]');
     await expect(next).toBeVisible({ timeout: 10000 });
     const scene = page.locator('[data-table-scene="spread"]');
     const cards = scene.locator('img:visible');
@@ -53,7 +53,7 @@ test('reduced motion, missing decorations, and enlarged reading text keep the re
   await expect(page.locator('[data-table-scene="play"]')).toHaveAttribute('data-hand', 'none');
   await page.getByRole('button', { name: '为我洗牌' }).click();
   await page.getByRole('button', { name: '让牌落在桌上' }).click({ timeout: 15000 });
-  const next = page.locator('main').getByRole('button', { name: '翻开这一张' }).last();
+  const next = page.locator('main').locator('[data-reveal="primary"]');
   for (let i = 0; i < 10; i++) await next.click();
   await page.addStyleTag({ content: 'article p { font-size: 34px; }' });
   await expect(page.locator('article p').first()).toHaveCSS('font-size', '34px');
@@ -84,7 +84,7 @@ test('celtic right column controls do not overlap the next card', async ({ page 
   await enter(page, true);
   await page.getByRole('button', { name: '为我洗牌' }).click();
   await page.getByRole('button', { name: '让牌落在桌上' }).click({ timeout: 15000 });
-  await expect(page.locator('main').getByRole('button', { name: '翻开这一张' }).last()).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('main').locator('[data-reveal="primary"]')).toBeVisible({ timeout: 10000 });
   const items = page.locator('[data-table-scene="spread"] [role="listitem"]');
   const rects = [];
   for (const index of [9, 8, 7, 6]) rects.push((await items.nth(index).boundingBox())!);

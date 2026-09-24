@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CARD_IDS } from '@/data/card-ids';
-import { canResume, createSession, persistable, reduce, type RitualSession } from '@/lib/ritual-machine';
+import { canResume, coupleSaveOptions, createSession, normalizeSaveOptions, persistable, reduce, stepPositionId, type RitualSession } from '@/lib/ritual-machine';
 import type { ShuffledCard } from '@/lib/shuffle';
 
 function fakeDeck(): ShuffledCard[] {
@@ -114,6 +114,84 @@ describe('ritual machine', () => {
       expect(parked.shufflePhase).toBe('idle');
       expect(parked.operationId).toBeNull();
     }
+  });
+
+  it('reveals the selected card before walking the deal order', () => {
+    let state = createSession();
+    state = reduce(state, { type: 'ACK_ENTER' });
+    state = reduce(state, { type: 'SUBMIT_QUESTION' });
+    state = reduce(state, { type: 'SET_SPREAD', spreadId: 'celtic' });
+    state = reduce(state, { type: 'CONFIRM_SPREAD' });
+    state = reduce(state, { type: 'AUTO_SHUFFLE', operationId: 'op' });
+    state = reduce(state, {
+      type: 'SHUFFLE_COMMITTED',
+      sessionId: state.sessionId,
+      operationId: 'op',
+      deckPreCut: fakeDeck(),
+      commitFull: 'd'.repeat(64),
+      commitShort: 'd'.repeat(16),
+    });
+    state = reduce(state, { type: 'CONFIRM_CUT' });
+    state = reduce(state, { type: 'DEAL_DONE' });
+    state = reduce(state, { type: 'SELECT_POSITION', positionId: 'crown' });
+    state = reduce(state, { type: 'STEP_SELECTION', delta: 1 });
+    expect(state.stage === 'reveal' && state.selectedPositionId).toBe('future');
+    expect(state.stage === 'reveal' && state.revealed).toEqual([]);
+    state = reduce(state, { type: 'SELECT_POSITION', positionId: 'crown' });
+    state = reduce(state, { type: 'REVEAL_NEXT' });
+    expect(state.stage === 'reveal' && state.revealed).toEqual(['crown']);
+    expect(state.stage === 'reveal' && state.selectedPositionId).toBe('crown');
+    state = reduce(state, { type: 'REVEAL_NEXT' });
+    expect(state.stage === 'reveal' && state.revealed).toEqual(['crown', 'present']);
+    expect(state.stage === 'reveal' && state.selectedPositionId).toBe('present');
+    expect(stepPositionId('three', 'past', -1)).toBe('past');
+    expect(stepPositionId('three', 'future', 1)).toBe('future');
+    expect(stepPositionId('three', 'present', 1)).toBe('future');
+  });
+
+  it('returns from the question and from an idle shuffle, and not after the seal', () => {
+    let state = reduce(createSession(), { type: 'ACK_ENTER' });
+    state = reduce(state, { type: 'BACK' });
+    expect(state.stage).toBe('enter');
+    state = walkToShuffle();
+    state = reduce(state, { type: 'BACK' });
+    expect(state.stage).toBe('spread');
+  });
+
+  it('couples private save to device save', () => {
+    expect(coupleSaveOptions({ saveDevice: false, savePrivate: false }, { saveDevice: false, savePrivate: true })).toEqual({
+      saveDevice: true,
+      savePrivate: true,
+    });
+    expect(coupleSaveOptions({ saveDevice: true, savePrivate: true }, { saveDevice: false, savePrivate: true })).toEqual({
+      saveDevice: false,
+      savePrivate: false,
+    });
+    expect(coupleSaveOptions({ saveDevice: true, savePrivate: true }, { saveDevice: true, savePrivate: false })).toEqual({
+      saveDevice: true,
+      savePrivate: false,
+    });
+    expect(normalizeSaveOptions({ saveDevice: false, savePrivate: true })).toEqual({ saveDevice: true, savePrivate: true });
+    let state = walkToShuffle();
+    state = reduce(state, { type: 'AUTO_SHUFFLE', operationId: 'op' });
+    state = reduce(state, {
+      type: 'SHUFFLE_COMMITTED',
+      sessionId: state.sessionId,
+      operationId: 'op',
+      deckPreCut: fakeDeck(),
+      commitFull: 'e'.repeat(64),
+      commitShort: 'e'.repeat(16),
+    });
+    state = reduce(state, { type: 'CONFIRM_CUT' });
+    state = reduce(state, { type: 'DEAL_DONE' });
+    state = reduce(state, { type: 'REVEAL_NEXT' });
+    state = reduce(state, { type: 'REVEAL_NEXT' });
+    state = reduce(state, { type: 'REVEAL_NEXT' });
+    state = reduce(state, { type: 'SET_SAVE_OPTIONS', saveDevice: false, savePrivate: true });
+    expect(state.stage === 'read' && state.saveDevice).toBe(true);
+    expect(state.stage === 'read' && state.savePrivate).toBe(true);
+    const parked = persistable({ ...state, saveDevice: false, savePrivate: true } as RitualSession);
+    expect(parked.stage === 'read' && parked.saveDevice).toBe(true);
   });
 
   it('abandon confirm starts a new session', () => {
