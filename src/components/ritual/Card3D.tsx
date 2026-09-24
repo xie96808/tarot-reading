@@ -60,7 +60,15 @@ export function Card3D({
     setPresentation({ revealed, flipped: false, view: 'as-dealt', manual: false, justRevealed: revealed });
   }
   const pose = useScenePose(visual, snap);
-  const introHold = useIntroHold(visual, snap);
+  const [holdFor, setHoldFor] = useState<SceneVisual | undefined>(() =>
+    !snap && visual !== undefined && visual !== 'back' ? visual : undefined,
+  );
+  const introHold = !snap && holdFor === visual && visual !== undefined && visual !== 'back';
+  useEffect(() => {
+    if (!introHold) return;
+    const frame = requestAnimationFrame(() => setHoldFor(undefined));
+    return () => cancelAnimationFrame(frame);
+  }, [introHold]);
   const [timedOpen, setTimedOpen] = useState<{ visual: SceneVisual | undefined; open: boolean }>({ visual, open: false });
   if (timedOpen.visual !== visual) setTimedOpen({ visual, open: false });
   const openFace = sceneFaceOpen(visual, pose.instant, timedOpen.open);
@@ -235,17 +243,4 @@ function useScenePose(visual: SceneVisual | undefined, snap: boolean): { from: S
     });
   }
   return pose;
-}
-
-function useIntroHold(visual: SceneVisual | undefined, snap: boolean): boolean {
-  const [holdFor, setHoldFor] = useState<SceneVisual | undefined>(() =>
-    !snap && visual !== undefined && visual !== 'back' ? visual : undefined,
-  );
-  const hold = !snap && holdFor === visual && visual !== undefined && visual !== 'back';
-  useEffect(() => {
-    if (!hold) return;
-    const frame = requestAnimationFrame(() => setHoldFor(undefined));
-    return () => cancelAnimationFrame(frame);
-  }, [hold]);
-  return hold;
 }
