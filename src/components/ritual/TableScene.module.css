@@ -14,7 +14,9 @@
 }
 
 .photo {
+  width: min(100%, calc(320px * 16 / 9));
   aspect-ratio: 16 / 9;
+  height: auto;
   overflow: hidden;
 }
 

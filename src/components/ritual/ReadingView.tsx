@@ -1,16 +1,9 @@
 'use client';
 
 import { COPY } from '@/i18n/zh-CN';
-import type { PositionReading, ReadingDocument } from '@/lib/reading';
 import { SPREADS } from '@/data/lexicons/zh-1/spreads';
+import { readingGroups, whyForRelation, type PositionReading, type ReadingDocument } from '@/lib/reading';
 import styles from './ReadingView.module.css';
-
-const CELTIC_GROUPS: Array<{ id: 'core' | 'path' | 'people' | 'close'; title: string }> = [
-  { id: 'core', title: '当下核心' },
-  { id: 'path', title: '来处与走向' },
-  { id: 'people', title: '内外视角' },
-  { id: 'close', title: '条件性收束' },
-];
 
 function PositionBlock({ position }: { position: PositionReading }) {
   return (
@@ -25,52 +18,68 @@ function PositionBlock({ position }: { position: PositionReading }) {
   );
 }
 
-export function ReadingView({
-  question,
-  doc,
-}: {
-  question: string;
-  doc: ReadingDocument;
-}) {
+function Why({ doc, edgeId }: { doc: ReadingDocument; edgeId: string }) {
+  const rel = doc.relations.find((item) => item.edgeId === edgeId);
+  if (!rel) return null;
+  return (
+    <details>
+      <summary>{COPY.whyThis}</summary>
+      <p>{whyForRelation(rel, doc.positions)}</p>
+    </details>
+  );
+}
+
+export function ReadingView({ doc }: { doc: ReadingDocument }) {
   const spread = SPREADS[doc.spreadId];
-  const byId = Object.fromEntries(doc.positions.map((position) => [position.positionId, position]));
+  const groups = readingGroups(doc);
+  const focusName = spread.positions.find((p) => p.id === spread.focusPositionId)?.nameZh;
 
   return (
     <article className={styles.page}>
-      {question ? <p className={styles.question}>问：{question}</p> : <p className={styles.question}>这次没有写下问题。</p>}
+      <p className={styles.question}>{doc.framing}</p>
       {doc.spreadId === 'single' ? <p className={styles.disclaimer}>{COPY.yesNoDisclaimer}</p> : null}
-      {doc.spreadId === 'celtic'
-        ? CELTIC_GROUPS.map((group) => {
-            const items = spread.positions.filter((position) => position.group === group.id);
-            return (
-              <div key={group.id} className={styles.group}>
-                <h2>{group.title}</h2>
-                {items.map((position) => (
-                  <PositionBlock key={position.id} position={byId[position.id]} />
-                ))}
-              </div>
-            );
-          })
+      {groups
+        ? groups.map((group) => (
+            <div key={group.id} className={styles.group}>
+              <h2>{group.title}</h2>
+              {group.positions.map((position) => (
+                <PositionBlock key={position.positionId} position={position} />
+              ))}
+              {group.relations.map((rel) => (
+                <p key={rel.edgeId}>{rel.text}</p>
+              ))}
+              {group.relations.map((rel) => (
+                <Why key={`${rel.edgeId}-why`} doc={doc} edgeId={rel.edgeId} />
+              ))}
+            </div>
+          ))
         : doc.positions.map((position) => <PositionBlock key={position.positionId} position={position} />)}
-      <section>
-        <h2>整阵线索</h2>
-        {doc.synthesis.split('\n').map((line) => (
-          <p key={line}>{line}</p>
-        ))}
-        {doc.relations.map((rel) => (
-          <details key={rel.edgeId}>
-            <summary>{COPY.whyThis}</summary>
-            <p>
-              {rel.ruleId} · {rel.sourcePositionIds.join(' / ')}
-            </p>
-          </details>
-        ))}
-      </section>
+      {groups ? (
+        doc.stats.length > 0 ? (
+          <section>
+            <h2>整阵线索</h2>
+            {doc.stats.map((stat) => (
+              <p key={stat.kind}>{stat.text}</p>
+            ))}
+          </section>
+        ) : null
+      ) : (
+        <section>
+          <h2>整阵线索</h2>
+          {doc.synthesis.split('\n').map((line, index) => (
+            <p key={`${index}-${line}`}>{line}</p>
+          ))}
+          {doc.relations.map((rel) => (
+            <Why key={rel.edgeId} doc={doc} edgeId={rel.edgeId} />
+          ))}
+        </section>
+      )}
       <section>
         <h2>留给自己</h2>
         <p>{doc.takeaway}</p>
         <p className={styles.muted}>
-          焦点位置：{spread.positions.find((p) => p.id === spread.focusPositionId)?.nameZh}
+          焦点位置：{focusName}
+          {doc.spreadId === 'celtic' ? `。${COPY.focusNotOutcome}` : ''}
         </p>
       </section>
     </article>

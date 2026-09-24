@@ -82,11 +82,19 @@ export function Card3D({
             <div className={styles.orient} style={{ transform: `rotate(${rotation}deg)` }}>
               {revealed && urls ? <CardFace urls={urls} sizes={sizes} alt={alt} /> : null}
             </div>
-            {revealed && reversed ? <span className={styles.badge}>{COPY.reversed}</span> : null}
           </div>
         </div>
       </div>
-      {label ? <p className={styles.label}>{label}</p> : null}
+      {label || (revealed && reversed) ? (
+        <p className={styles.label}>
+          {label}
+          {revealed && reversed ? (
+            <span className={styles.badge} data-part="badge">
+              {COPY.reversed}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
       {!revealed && onReveal ? (
         <button type="button" className={styles.action} onClick={onReveal}>
           {COPY.revealAction}

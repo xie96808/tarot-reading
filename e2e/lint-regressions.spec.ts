@@ -59,10 +59,10 @@ test('manual reversed orientation survives timers and does not leak to another p
   // Cross the auto-upright deadline: explicit manual choice must win.
   await page.waitForTimeout(1000);
   await expect(scene.getByRole('button', { name: '转正看清' })).toBeVisible();
-  await scene.getByRole('button', { name: '2', exact: true }).click();
+  await scene.getByRole('button', { name: '2 现在', exact: true }).click();
   await expect(scene.getByRole('button', { name: '看落牌方向' })).toBeVisible();
-  await scene.getByRole('button', { name: '3', exact: true }).click();
-  await scene.getByRole('button', { name: '翻开这一张', exact: true }).click();
+  await scene.getByRole('button', { name: '3 未来', exact: true }).click();
+  await scene.locator('[data-reveal="primary"]').click();
   await expect(scene.getByRole('button', { name: '看落牌方向' })).toBeVisible();
   const flipped = scene.locator('[class*="inner"][class*="revealed"]:visible');
   await expect(flipped).toHaveCount(1);

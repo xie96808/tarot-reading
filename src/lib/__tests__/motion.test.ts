@@ -5,6 +5,7 @@ import {
   dealDelayMs,
   dealDurationMs,
   shuffleCommitHoldMs,
+  cutProportion,
   visibleCutCounts,
 } from '@/lib/motion';
 
@@ -34,6 +35,15 @@ describe('shuffle and cut motion helpers', () => {
     expect(autoUprightDelayMs(false, false)).toBeNull();
     expect(autoUprightDelayMs(true, true)).toBe(0);
     expect(autoUprightDelayMs(true, false)).toBe(MOTION.flipMs + MOTION.uprightPauseMs);
+  });
+
+  it('reports the real cut proportion, not the capped packet', () => {
+    expect(cutProportion(1)).toEqual({ top: 1, bottom: 77, topPct: 1 / 78 });
+    expect(cutProportion(39)).toEqual({ top: 39, bottom: 39, topPct: 39 / 78 });
+    expect(cutProportion(77)).toEqual({ top: 77, bottom: 1, topPct: 77 / 78 });
+    expect(cutProportion(0)).toBeNull();
+    expect(cutProportion(78)).toBeNull();
+    expect(cutProportion(1.5)).toBeNull();
   });
 
   it('caps visible packets so the DOM never mounts 78 faces', () => {

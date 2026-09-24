@@ -9,7 +9,7 @@ test('celtic cross reveals ten positions and grouped reading', async ({ page }) 
   await page.getByRole('button', { name: '开始洗牌' }).click();
   await page.getByRole('button', { name: '为我洗牌' }).click();
   await page.getByRole('button', { name: '让牌落在桌上' }).click({ timeout: 15_000 });
-  const reveal = page.locator('main').getByRole('button', { name: '翻开这一张' }).last();
+  const reveal = page.locator('main').locator('[data-reveal="primary"]');
   for (let i = 0; i < 10; i += 1) {
     await expect(reveal).toBeVisible({ timeout: 8_000 });
     await reveal.click();

@@ -6,16 +6,16 @@ import { COPY } from '@/i18n/zh-CN';
 import { SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
 import { CARDS } from '@/data/lexicons/zh-1';
 import { composeReading } from '@/lib/reading';
+import { abandonCopy } from '@/lib/ritual-copy';
 import { encodeReading } from '@/lib/reading-codec';
 import { commitShuffle, newOperationId, randomCutIndex } from '@/lib/ritual-effects';
-import { canResume, createSession, persistable, reduce, type RitualSession } from '@/lib/ritual-machine';
+import { canResume, createSession, persistable, reduce, stepPositionId, type RitualSession } from '@/lib/ritual-machine';
 import { clearSession, loadSession, pushHistory, saveSession, subscribeStorageStatus, storageStatusSnapshot, serverStorageStatusSnapshot } from '@/lib/storage';
 import { loadFaceIndex, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
-import { dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
+import { cutProportion, dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
 import { tableHandMode } from '@/lib/table-hands';
-import { CardBack } from './CardBack';
 import { TableScene } from './TableScene';
 import { ShuffleTable } from './ShuffleTable';
 import { CutTable } from './CutTable';
@@ -34,13 +34,16 @@ function chapter(stage: RitualSession['stage']): string {
   return '留笺';
 }
 
-export function RitualApp() {
+export function RitualApp({ initialSpread = null }: { initialSpread?: SpreadId | null }) {
   const ready = useClientReady();
-  return ready ? <RitualClient /> : <main className={styles.shell} />;
+  return ready ? <RitualClient initialSpread={initialSpread} /> : <main className={styles.shell} />;
 }
 
-function RitualClient() {
-  const [state, setState] = useState<RitualSession>(() => createSession());
+function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
+  const [state, setState] = useState<RitualSession>(() => {
+    const session = createSession();
+    return initialSpread ? { ...session, spreadId: initialSpread } : session;
+  });
   const [faces, setFaces] = useState<Map<string, FaceUrls>>(new Map());
   const [shareUrl, setShareUrl] = useState('');
   const [includeQuestion, setIncludeQuestion] = useState(false);
@@ -156,12 +159,31 @@ function RitualClient() {
     if (!('draws' in state) && state.stage !== 'close') return null;
     const draws = state.stage === 'close' ? state.receipt.draws : state.draws;
     const spreadId = state.spreadId;
-    return composeReading(spreadId, draws, CARDS);
+    const question = state.stage === 'close' ? state.receipt.question : state.question;
+    return composeReading(spreadId, draws, CARDS, question);
   }, [state]);
 
   useEffect(() => {
-    document.getElementById('stage-title')?.focus();
+    const title = document.getElementById('stage-title');
+    if (!title) return;
+    title.focus({ preventScroll: true });
+    title.scrollIntoView({
+      block: 'start',
+      inline: 'nearest',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    });
   }, [state.stage]);
+
+  useEffect(() => {
+    const onRestart = () => {
+      clearSession();
+      setPendingResume(null);
+      setRestartAsk(false);
+      setState(createSession());
+    };
+    window.addEventListener('tarot:restart', onRestart);
+    return () => window.removeEventListener('tarot:restart', onRestart);
+  }, []);
 
   return (
     <main className={styles.shell}>
@@ -176,7 +198,7 @@ function RitualClient() {
       {storageNote ? <p className={styles.warn}>{COPY.storageFallback}</p> : null}
       {state.abandonOpen ? (
         <ConfirmModal onCancel={() => dispatch({ type: 'ABANDON_CANCEL' })}>
-          <p>{COPY.abandonConfirm}</p>
+          <p>{abandonCopy(state.stage)}</p>
           <button type="button" onClick={() => dispatch({ type: 'ABANDON_CONFIRM' })}>
             确定放弃
           </button>
@@ -272,12 +294,16 @@ function RitualClient() {
               }
             }}
           />
-          {[...state.question].length >= MAX_QUESTION_CODEPOINTS - 20 ? (
+          {[...state.question].length > 0 ? (
             <p className={styles.muted} aria-live="polite">
               {COPY.questionCount([...state.question].length)}
             </p>
           ) : null}
           <p className={styles.muted}>{COPY.questionPrivacy}</p>
+          <p className={styles.muted}>
+            {COPY.crisisResources}{' '}
+            <Link href="/about#help">方法页</Link>
+          </p>
           <div className={styles.examples}>
             {COPY.questionExamples.map((example) => (
               <button key={example} type="button" onClick={() => dispatch({ type: 'SET_QUESTION', question: example })}>
@@ -298,6 +324,9 @@ function RitualClient() {
           >
             {COPY.questionSkip}
           </button>
+          <button type="button" className={styles.ghost} onClick={() => dispatch({ type: 'BACK' })}>
+            {COPY.backToEnter}
+          </button>
         </section>
       ) : null}
 
@@ -308,12 +337,15 @@ function RitualClient() {
               const spread = SPREADS[id];
               return (
                 <li key={id} className={state.spreadId === id ? styles.chosen : undefined}>
-                  <button type="button" onClick={() => dispatch({ type: 'SET_SPREAD', spreadId: id })}>
+                  <button type="button" aria-pressed={state.spreadId === id} onClick={() => dispatch({ type: 'SET_SPREAD', spreadId: id })}>
                     <strong>{spread.nameZh}</strong>
                     <span>
                       {spread.titleZh} · {spread.blurbZh}
                     </span>
-                    <em>{spread.durationZh}</em>
+                    <em>
+                      {spread.durationZh}
+                      {state.spreadId === id ? ' · 当前' : ''}
+                    </em>
                   </button>
                 </li>
               );
@@ -340,6 +372,23 @@ function RitualClient() {
       {state.stage === 'shuffle' ? (
         <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`}>
           <h1>{COPY.shuffleTitle}</h1>
+          <p>{state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}</p>
+          <button
+            type="button"
+            className={styles.primary}
+            disabled={state.shufflePhase === 'committing'}
+            onClick={() => {
+              samples.current = [];
+              dispatch({ type: 'AUTO_SHUFFLE', operationId: newOperationId() });
+            }}
+          >
+            {COPY.shuffleAuto}
+          </button>
+          {state.shufflePhase === 'idle' ? (
+            <button type="button" className={styles.ghost} onClick={() => dispatch({ type: 'BACK' })}>
+              {COPY.backToSpread}
+            </button>
+          ) : null}
           <TableScene
             hand={tableHandMode({
               stage: 'shuffle',
@@ -370,18 +419,7 @@ function RitualClient() {
           >
             <ShuffleTable phase={state.shufflePhase} paused={pageHidden} reduced={reducedMotion} />
           </TableScene>
-          <p>{state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}</p>
-          <button
-            type="button"
-            className={styles.primary}
-            disabled={state.shufflePhase === 'committing'}
-            onClick={() => {
-              samples.current = [];
-              dispatch({ type: 'AUTO_SHUFFLE', operationId: newOperationId() });
-            }}
-          >
-            {COPY.shuffleAuto}
-          </button>
+          <p className={styles.muted}>{COPY.tablePhotoCaption}</p>
         </section>
       ) : null}
 
@@ -396,13 +434,6 @@ function RitualClient() {
             <code style={{ fontSize: 13, wordBreak: 'break-all' }}>{state.commitFull}</code>
             <p className={styles.muted}>只检查本标签页牌序是否自洽，不是公证。</p>
           </details>
-          <TableScene
-            hand={tableHandMode({ stage: 'cut', reduced: reducedMotion })}
-            feedbackLabel="查看切牌比例示意"
-            label={COPY.cutTitle}
-          >
-            <CutTable cutIndex={state.cutIndex} />
-          </TableScene>
           <label>
             {COPY.cutHint(state.cutIndex)}
             <input
@@ -441,6 +472,17 @@ function RitualClient() {
           >
             {COPY.cutConfirm}
           </button>
+          <p data-cut-top={cutProportion(state.cutIndex)?.top} data-cut-bottom={cutProportion(state.cutIndex)?.bottom}>
+            上方 {state.cutIndex} 张 · 下方 {78 - state.cutIndex} 张
+          </p>
+          <TableScene
+            hand={tableHandMode({ stage: 'cut', reduced: reducedMotion })}
+            feedbackLabel="查看切牌比例示意"
+            label={COPY.cutTitle}
+          >
+            <CutTable cutIndex={state.cutIndex} />
+          </TableScene>
+          <p className={styles.muted}>{COPY.tablePhotoCaption}</p>
         </section>
       ) : null}
 
@@ -452,11 +494,6 @@ function RitualClient() {
               hand={tableHandMode({ stage: state.stage, reduced: reducedMotion })}
               layout="spread"
             >
-              {state.stage === 'deal' ? (
-                <div className={styles.dealSource} aria-hidden="true">
-                  <CardBack alt="" />
-                </div>
-              ) : null}
               <Tableau
                 spreadId={state.spreadId}
                 draws={state.draws}
@@ -476,8 +513,28 @@ function RitualClient() {
           {state.stage === 'reveal' ? (
             <div className={styles.center}>
               <p className={styles.muted}>{COPY.reversedHint}</p>
-              <button type="button" className={styles.primary} onClick={() => dispatch({ type: 'REVEAL_NEXT' })}>
-                {COPY.revealAction}
+              {state.revealed.length < state.draws.length ? (
+                <button type="button" className={styles.primary} data-reveal="primary" onClick={() => dispatch({ type: 'REVEAL_NEXT' })}>
+                  {state.revealed.includes(state.selectedPositionId)
+                    ? COPY.revealNextClosed
+                    : COPY.revealSelected(SPREADS[state.spreadId].positions.find((p) => p.id === state.selectedPositionId)?.nameZh ?? '')}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className={styles.ghost}
+                disabled={stepPositionId(state.spreadId, state.selectedPositionId, -1) === state.selectedPositionId}
+                onClick={() => dispatch({ type: 'STEP_SELECTION', delta: -1 })}
+              >
+                {COPY.stepPrev}
+              </button>
+              <button
+                type="button"
+                className={styles.ghost}
+                disabled={stepPositionId(state.spreadId, state.selectedPositionId, 1) === state.selectedPositionId}
+                onClick={() => dispatch({ type: 'STEP_SELECTION', delta: 1 })}
+              >
+                {COPY.stepNext}
               </button>
             </div>
           ) : null}
@@ -499,7 +556,7 @@ function RitualClient() {
                   {COPY.viewPage}
                 </button>
               </div>
-              <ReadingView question={state.question.trim()} doc={reading} />
+              <ReadingView doc={reading} />
               <div className={styles.center}>
                 <label>
                   留笺
@@ -513,6 +570,9 @@ function RitualClient() {
                     placeholder={COPY.notePlaceholder}
                   />
                 </label>
+                {[...state.note].length > 0 ? (
+                  <p className={styles.muted}>{COPY.noteCount([...state.note].length)}</p>
+                ) : null}
                 <label className={styles.check}>
                   <input
                     type="checkbox"
@@ -554,7 +614,7 @@ function RitualClient() {
         <section className={`${styles.center} ${styles.stage}`}>
           <h1 className={styles.closeTitle}>{COPY.closeTitle}</h1>
           <p>{COPY.closeBody}</p>
-          <ReadingView question={state.receipt.question.trim()} doc={reading} />
+          <ReadingView doc={reading} />
           <label className={styles.check}>
             <input
               type="checkbox"
@@ -595,7 +655,18 @@ function RitualClient() {
           {shareUrl ? (
             <textarea readOnly value={shareUrl} className={`${styles.field} ${styles.shareBox}`} />
           ) : null}
-          <Link href={`/deck/${state.receipt.draws[0].cardId}`}>{COPY.viewCards}</Link>
+          <ul aria-label="这几张牌的词条">
+            {state.receipt.draws.map((draw) => {
+              const position = SPREADS[state.receipt.spreadId].positions.find((item) => item.id === draw.positionId);
+              return (
+                <li key={draw.positionId}>
+                  <Link href={`/deck/${draw.cardId}`}>
+                    {position?.nameZh} · {CARDS[draw.cardId].nameZh}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
           <button
             type="button"
             className={styles.ghost}

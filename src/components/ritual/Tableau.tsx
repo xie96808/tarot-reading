@@ -70,7 +70,7 @@ export function Tableau({
             className={position.id === selected.positionId ? styles.navCurrent : undefined}
             onClick={() => onSelect(position.id)}
           >
-            {position.drawOrder}
+            {`${position.drawOrder} ${position.nameZh}`}
           </button>
         ))}
       </div>

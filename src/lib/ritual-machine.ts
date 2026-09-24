@@ -92,6 +92,7 @@ export type RitualEvent =
   | { type: 'SELECT_POSITION'; positionId: string }
   | { type: 'REVEAL_POSITION'; positionId: string }
   | { type: 'REVEAL_NEXT' }
+  | { type: 'STEP_SELECTION'; delta: -1 | 1 }
   | { type: 'SET_NOTE'; note: string }
   | { type: 'SET_SAVE_OPTIONS'; saveDevice: boolean; savePrivate: boolean }
   | { type: 'SET_VIEW'; view: 'table' | 'page' }
@@ -166,7 +167,11 @@ export function reduce(state: RitualSession, event: RitualEvent): RitualSession 
     case 'read':
       if (event.type === 'SET_NOTE') return { ...state, note: event.note };
       if (event.type === 'SET_SAVE_OPTIONS') {
-        return { ...state, saveDevice: event.saveDevice, savePrivate: event.savePrivate };
+        const coupled = coupleSaveOptions(
+          { saveDevice: state.saveDevice, savePrivate: state.savePrivate },
+          { saveDevice: event.saveDevice, savePrivate: event.savePrivate },
+        );
+        return { ...state, saveDevice: coupled.saveDevice, savePrivate: coupled.savePrivate };
       }
       if (event.type === 'SET_VIEW') return { ...state, view: event.view };
       if (event.type === 'CLOSE_ACK') {
@@ -319,8 +324,17 @@ function reduceReveal(
     };
     return next;
   }
+  if (event.type === 'STEP_SELECTION') {
+    return {
+      ...state,
+      selectedPositionId: stepPositionId(state.spreadId, state.selectedPositionId, event.delta),
+    };
+  }
   if (event.type === 'REVEAL_NEXT') {
-    const nextId = firstUnrevealed(state);
+    const selectedOpen = valid.has(state.selectedPositionId) && !state.revealed.includes(state.selectedPositionId)
+      ? state.selectedPositionId
+      : null;
+    const nextId = selectedOpen ?? firstUnrevealed(state);
     if (!nextId) return state;
     return reduceReveal(state, { type: 'REVEAL_POSITION', positionId: nextId });
   }
@@ -335,7 +349,43 @@ export function persistable(state: RitualSession): RitualSession {
   if (state.stage === 'cut') {
     return { ...state, operationId: null, abandonOpen: false };
   }
+  if (state.stage === 'read') {
+    const flags = normalizeSaveOptions(state);
+    return { ...state, abandonOpen: false, saveDevice: flags.saveDevice, savePrivate: flags.savePrivate };
+  }
   return { ...state, abandonOpen: false };
+}
+
+export function stepPositionId(spreadId: SpreadId, currentId: string, delta: -1 | 1): string {
+  const ids = SPREADS[spreadId].positions.map((position) => position.id);
+  const index = Math.max(0, ids.indexOf(currentId));
+  const next = index + delta;
+  if (next < 0 || next >= ids.length) return ids[index] ?? ids[0];
+  return ids[next];
+}
+
+export function seedSession(spreadId: SpreadId | null): RitualSession {
+  const session = createSession();
+  return { ...session, spreadId: spreadId ?? 'three' };
+}
+
+export function coupleSaveOptions(
+  prev: { saveDevice: boolean; savePrivate: boolean },
+  next: { saveDevice: boolean; savePrivate: boolean },
+): { saveDevice: boolean; savePrivate: boolean } {
+  if (!prev.savePrivate && next.savePrivate) return { saveDevice: true, savePrivate: true };
+  if (prev.saveDevice && !next.saveDevice) return { saveDevice: false, savePrivate: false };
+  if (!next.saveDevice) return { saveDevice: false, savePrivate: false };
+  return { saveDevice: true, savePrivate: next.savePrivate };
+}
+
+export function normalizeSaveOptions(input: { saveDevice: boolean; savePrivate: boolean }): {
+  saveDevice: boolean;
+  savePrivate: boolean;
+} {
+  if (input.savePrivate && !input.saveDevice) return { saveDevice: true, savePrivate: true };
+  if (!input.saveDevice) return { saveDevice: false, savePrivate: false };
+  return { saveDevice: input.saveDevice, savePrivate: input.savePrivate };
 }
 
 export function canResume(session: RitualSession | null): session is RitualSession {

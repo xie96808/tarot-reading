@@ -157,7 +157,7 @@ export const SPREADS: Record<SpreadId, SpreadDefinition> = {
         drawOrder: 9,
         nameZh: '希望与恐惧',
         frameZh: '期待与担忧如何指向同一件事',
-        group: 'people',
+        group: 'close',
       },
       {
         id: 'outcome',

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { COPY } from '@/i18n/zh-CN';
-import { CardBack } from '@/components/ritual/CardBack';
+import { CardFaceStatic } from '@/components/deck/CardFaceStatic';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 };
 
 const SAMPLE = [
-  { pos: '过去', name: '愚者', orient: '正位', text: '一个开端曾让你愿意轻装尝试。这里首先谈的是起步的方式，而不是保证此刻仍应继续向前。' },
-  { pos: '现在', name: '圣杯八', orient: '正位', text: '杯还在，但已经喂不饱你。此刻的主题是辨认：哪些曾经足够的东西，如今值得重新衡量。' },
-  { pos: '未来', name: '星币王后', orient: '逆位', text: '若维持当前轨迹，值得留意的是照顾与资源分配。园子还在，园丁也需要被算进照顾的名单。' },
+  { pos: '过去', name: '愚者', orient: '正位', cardId: '00_the_fool' as const, text: '一个开端曾让你愿意轻装尝试。这里首先谈的是起步的方式，而不是保证此刻仍应继续向前。' },
+  { pos: '现在', name: '圣杯八', orient: '正位', cardId: 'cups_08' as const, text: '杯还在，但已经喂不饱你。此刻的主题是辨认：哪些曾经足够的东西，如今值得重新衡量。' },
+  { pos: '未来', name: '星币王后', orient: '逆位', cardId: 'pents_queen' as const, text: '若维持当前轨迹，值得留意的是照顾与资源分配。园子还在，园丁也需要被算进照顾的名单。' },
 ];
 
 export default function StaticThreePreview() {
@@ -21,7 +21,7 @@ export default function StaticThreePreview() {
       <div className={styles.table}>
         {SAMPLE.map((card) => (
           <figure key={card.pos}>
-            <CardBack alt={`${card.pos}牌背占位`} />
+            <CardFaceStatic cardId={card.cardId} alt={`${card.pos} ${card.name}`} />
             <figcaption>
               <strong>{card.pos}</strong>
               <span>

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { CARD_IDS, isCardId } from '@/data/card-ids';
 import { CARDS } from '@/data/lexicons/zh-1';
 import { COPY } from '@/i18n/zh-CN';
+import { formatCardMeta } from '@/data/lexicons/zh-1/labels';
 import { CardFaceStatic } from '@/components/deck/CardFaceStatic';
 
 type Props = { params: Promise<{ cardId: string }> };
@@ -41,12 +42,7 @@ export default async function CardPage({ params }: Props) {
         <p>{card.reversed.meaning}</p>
         <p>{card.reversed.reflection}</p>
       </section>
-      {card.element ? (
-        <p style={{ color: 'var(--ash)' }}>
-          元素 {card.element}
-          {card.astrology ? ` · 星对应 ${card.astrology}` : ''}
-        </p>
-      ) : null}
+      <p style={{ color: 'var(--ash)' }}>{formatCardMeta(card)}</p>
     </main>
   );
 }

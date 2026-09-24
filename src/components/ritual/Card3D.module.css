@@ -54,17 +54,16 @@
 }
 
 .badge {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  z-index: 2;
-  padding: 2px 8px;
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
   font-size: 12px;
   letter-spacing: 0.12em;
   color: var(--parchment);
   background: rgba(16, 14, 12, 0.78);
   border: 1px solid rgba(196, 163, 90, 0.45);
   pointer-events: none;
+  vertical-align: 1px;
 }
 
 .back img,
