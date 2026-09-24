@@ -11,7 +11,13 @@
 }
 
 .crossing .flip {
-  transform: rotateZ(90deg);
+  width: var(--portrait-w);
+  height: var(--portrait-h);
+  aspect-ratio: auto;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotateZ(90deg);
 }
 
 .flip {

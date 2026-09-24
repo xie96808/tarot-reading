@@ -1,14 +1,27 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
-import { CELTIC_SLOT_PERCENT, SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
 import { CARDS } from '@/data/lexicons/zh-1';
 import type { Draw } from '@/lib/shuffle';
 import type { FaceUrls } from '@/lib/faces';
 import { COPY } from '@/i18n/zh-CN';
+import { celticSlotLayout } from '@/lib/celtic-layout';
 import { dealDelayMs } from '@/lib/motion';
 import { Card3D } from './Card3D';
 import styles from './Tableau.module.css';
+
+function useDesktopBoard() {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const media = window.matchMedia('(min-width: 1024px)');
+      media.addEventListener('change', onStoreChange);
+      return () => media.removeEventListener('change', onStoreChange);
+    },
+    () => window.matchMedia('(min-width: 1024px)').matches,
+    () => false,
+  );
+}
 
 type TableauProps = {
   spreadId: SpreadId;
@@ -37,6 +50,20 @@ export function Tableau({
       animate: revealed.includes(selectedPositionId) && !selection.revealed.includes(selectedPositionId) });
   }
   const board = useRef<HTMLDivElement>(null);
+  const desktop = useDesktopBoard();
+  const [boardWidth, setBoardWidth] = useState(0);
+  useLayoutEffect(() => {
+    const node = board.current;
+    if (!node) return;
+    const measure = () => {
+      const next = node.clientWidth;
+      setBoardWidth(next > 0 ? next : Math.min(720, document.documentElement.clientWidth - 48));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [spreadId, dealing, desktop]);
   useLayoutEffect(() => {
     if (!dealing || !board.current) return;
     const origin = board.current.closest('[data-table-scene]')?.querySelector('[data-deck-origin]');
@@ -48,7 +75,7 @@ export function Tableau({
       card.style.setProperty('--deal-x', `${source.x + source.width / 2 - target.x - target.width / 2}px`);
       card.style.setProperty('--deal-y', `${source.y + source.height / 2 - target.y - target.width * .8}px`);
     }
-  }, [dealing, spreadId]);
+  }, [dealing, spreadId, boardWidth]);
 
   const spread = SPREADS[spreadId];
   const count = spread.positions.length;
@@ -99,46 +126,66 @@ export function Tableau({
   );
 
   if (spreadId === 'celtic') {
+    const showBoard = dealing || desktop;
+    const layout = showBoard && boardWidth > 0 ? celticSlotLayout(boardWidth, { interactive: !dealing }) : null;
+    const geometry = layout ? Object.fromEntries(layout.slots.map((slot) => [slot.positionId, slot])) : null;
     return (
       <div ref={board} className={`${styles.celticWrap} ${dealing ? styles.dealingBoard : ''}`}>
-        {stepped}
-        <div className={styles.celtic} role="list">
-          {spread.positions.map((position) => {
-            const draw = draws.find((item) => item.positionId === position.id)!;
-            const isRevealed = revealed.includes(position.id);
-            const urls = isRevealed ? faces.get(draw.cardId) : undefined;
-            const slot = CELTIC_SLOT_PERCENT[position.id];
-            return (
-              <div
-                key={position.id}
-                role="listitem"
-                className={`${styles.celticSlot} ${selectedPositionId === position.id ? styles.selected : ''} ${position.id === 'challenge' ? styles.crossingSlot : ''} ${position.id === 'present' ? styles.presentSlot : ''}`}
-                style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
-              >
-                {position.id === 'present' ? (
-                  <button type="button" className={styles.presentAccess} onClick={() => onSelect('present')}>
-                    现状
+        {showBoard ? null : stepped}
+        {layout && geometry ? (
+          <div
+            className={`${styles.celtic} ${dealing ? styles.dealLayout : ''}`}
+            role="list"
+            style={{ width: layout.board.w, height: layout.board.h }}
+          >
+            {spread.positions.map((position) => {
+              const draw = draws.find((item) => item.positionId === position.id)!;
+              const isRevealed = revealed.includes(position.id);
+              const urls = isRevealed ? faces.get(draw.cardId) : undefined;
+              const slot = geometry[position.id];
+              return (
+                <div
+                  key={position.id}
+                  role="listitem"
+                  data-position={position.id}
+                  className={`${styles.placed} ${slot.rotated ? styles.rotated : ''} ${selectedPositionId === position.id ? styles.selected : ''}`}
+                  style={
+                    {
+                      left: slot.face.x,
+                      top: slot.face.y,
+                      width: slot.face.w,
+                      height: slot.face.h,
+                      '--portrait-w': `${layout.card.w}px`,
+                      '--portrait-h': `${layout.card.h}px`,
+                      '--label-x': `${slot.label.x - slot.face.x}px`,
+                      '--label-y': `${slot.label.y - slot.face.y}px`,
+                      '--label-w': `${slot.label.w}px`,
+                      '--reveal-x': `${slot.reveal.x - slot.face.x}px`,
+                      '--reveal-y': `${slot.reveal.y - slot.face.y}px`,
+                      '--reveal-w': `${slot.reveal.w}px`,
+                    } as CSSProperties
+                  }
+                >
+                  <button type="button" className={styles.hit} data-part="face" onClick={() => { onSelect(position.id); if (!isRevealed && !dealing) onReveal?.(position.id); }}>
+                    <span className="visually-hidden">{position.nameZh}</span>
                   </button>
-                ) : null}
-                <button type="button" className={styles.hit} onClick={() => { onSelect(position.id); if (!isRevealed && !dealing) onReveal?.(position.id); }}>
-                  <span className="visually-hidden">{position.nameZh}</span>
-                </button>
-                <Card3D
-                  revealed={isRevealed}
-                  urls={urls}
-                  sizes="96px"
-                  reversed={draw.orientation === 'reversed'}
-                  crossing={position.id === 'challenge'}
-                  dealing={dealing}
-                  dealDelayMs={dealDelayMs(position.drawOrder - 1, count)}
-                  alt={isRevealed ? `${CARDS[draw.cardId].nameZh} ${draw.orientation === 'reversed' ? COPY.reversed : COPY.upright}` : position.nameZh}
-                  label={position.nameZh}
-                  onReveal={isRevealed || !onReveal ? undefined : () => onReveal(position.id)}
-                />
-              </div>
-            );
-          })}
-        </div>
+                  <Card3D
+                    revealed={isRevealed}
+                    urls={urls}
+                    sizes={`${layout.card.w}px`}
+                    reversed={draw.orientation === 'reversed'}
+                    crossing={slot.rotated}
+                    dealing={dealing}
+                    dealDelayMs={dealDelayMs(position.drawOrder - 1, count)}
+                    alt={isRevealed ? `${CARDS[draw.cardId].nameZh} ${draw.orientation === 'reversed' ? COPY.reversed : COPY.upright}` : position.nameZh}
+                    label={position.nameZh}
+                    onReveal={isRevealed || !onReveal || dealing ? undefined : () => onReveal(position.id)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     );
   }

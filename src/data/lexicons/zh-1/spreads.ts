@@ -170,19 +170,6 @@ export const SPREADS: Record<SpreadId, SpreadDefinition> = {
   },
 };
 
-export const CELTIC_SLOT_PERCENT: Record<string, { x: number; y: number; rotateZ?: number }> = {
-  present: { x: 38, y: 48 },
-  challenge: { x: 38, y: 48, rotateZ: 90 },
-  foundation: { x: 38, y: 80 },
-  past: { x: 18, y: 48 },
-  crown: { x: 38, y: 16 },
-  future: { x: 58, y: 48 },
-  self: { x: 80, y: 84 },
-  environment: { x: 80, y: 62 },
-  hopes_fears: { x: 80, y: 40 },
-  outcome: { x: 80, y: 18 },
-};
-
 export function positionsFor(spreadId: SpreadId): SpreadPosition[] {
   return SPREADS[spreadId].positions;
 }

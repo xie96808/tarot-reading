@@ -33,38 +33,64 @@
 
 .celtic {
   position: relative;
-  width: min(100%, 720px);
-  height: 1100px;
   margin: 0 auto;
 }
 
-.celticSlot {
+.placed {
   position: absolute;
-  width: 96px;
-  transform: translate(-50%, -50%);
+  overflow: visible;
 }
 
-.presentSlot {
-  z-index: 1;
+.placed .hit {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
 }
 
-.crossingSlot {
-  z-index: 3;
+.placed :global(.slot) {
+  width: 100%;
+  height: 100%;
+  gap: 0;
 }
 
-.presentAccess {
+.placed:not(.rotated) :global(.flip) {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.placed [data-part='label'],
+.placed [data-part='reveal'] {
   position: absolute;
-  left: -58px;
-  top: 50%;
-  transform: translateY(-50%);
+  margin: 0;
   z-index: 4;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 8px;
-  background: var(--ink-2);
-  color: var(--candle);
-  border: 1px solid rgba(196, 163, 90, 0.45);
+}
+
+.placed [data-part='label'] {
+  left: var(--label-x);
+  top: var(--label-y);
+  width: var(--label-w);
+  height: 22px;
   font-size: 13px;
+  line-height: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.placed [data-part='reveal'] {
+  left: var(--reveal-x);
+  top: var(--reveal-y);
+  width: var(--reveal-w);
+  height: 44px;
+  min-height: 44px;
+  padding-inline: 4px;
+  font-size: 12px;
+}
+
+.rotated {
+  z-index: 3;
 }
 
 .step {
@@ -96,12 +122,12 @@
 }
 
 .dealingBoard .item,
-.dealingBoard .celticSlot {
+.dealingBoard .placed {
   pointer-events: none;
 }
 
 @media (max-width: 1023px) {
-  .celtic {
+  .celtic:not(.dealLayout) {
     display: none;
   }
 
@@ -124,26 +150,14 @@
     display: none;
   }
 
-  .celticWrap.dealingBoard .celtic {
-    display: block;
-    height: 520px;
-  }
-
   .celticWrap.dealingBoard .step {
     display: none;
   }
-}
 
-@media (max-width: 1023px) {
-  .celticWrap.dealingBoard .celticSlot { width: clamp(32px, 8vw, 64px); }
-  .celticWrap.dealingBoard button { display: none; }
-}
-
-/* Leave room for the two controls beneath the crossing cards. */
-@media (min-width: 1024px) {
-  .presentSlot p,
-  .presentSlot > div > button { transform: translateY(76px); }
-  .celticSlot > div > button { padding-inline: 4px; font-size: 12px; }
+  .celticWrap.dealingBoard .placed [data-part='reveal'],
+  .celticWrap.dealingBoard .hit {
+    display: none;
+  }
 }
 
 .step { animation: stepArrive 320ms ease both; }
