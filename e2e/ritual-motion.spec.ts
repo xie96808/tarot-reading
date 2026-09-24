@@ -6,7 +6,10 @@ for (const width of [390, 1440]) {
     const missing: string[] = [];
     page.on('response', response => { if (response.status() >= 400 && /\/(table|cards|ui)\//.test(response.url())) missing.push(response.url()); });
     await page.goto('/read');
-    for (const name of ['我准备好了', '这次不设问题', '开始洗牌']) await page.getByRole('button', { name, exact: true }).click();
+    await page.getByRole('button', { name: '我准备好了', exact: true }).click();
+    await page.getByRole('button', { name: '这次不设问题', exact: true }).click();
+    await page.getByRole('button', { name: '推门' }).click();
+    await page.getByRole('button', { name: '开始洗牌', exact: true }).click();
     const scene = page.locator('[data-table-scene="play"]');
     const card = page.locator('[data-shuffle-card]').last();
     await expect(card).toBeVisible();
@@ -35,9 +38,14 @@ for (const width of [390, 1440]) {
     await expect(flying).toBeVisible();
     const origin = await flying.evaluate(el => ({ x: el.style.getPropertyValue('--deal-x'), y: el.style.getPropertyValue('--deal-y'), animations: el.getAnimations().length }));
     expect(origin.x).not.toBe(''); expect(origin.y).not.toBe(''); expect(origin.animations).toBeGreaterThan(0);
-    const next = page.locator('main').getByRole('button', { name: '翻开这一张' }).last();
+    const next = page.locator('main').locator('[data-reveal="primary"]');
     await next.waitFor();
     await next.click();
+    await expect(page.locator('[data-card-visual]:visible [class*="inner"][class*="revealed"]')).toHaveCount(0);
+    await expect(page.locator('[data-card-visual]:visible [class*="inner"][class*="partial"]').first()).toBeVisible();
+    const skip = page.getByRole('button', { name: '先不选，看这张牌' });
+    await expect(skip).toBeEnabled();
+    await skip.click();
     await expect(page.locator('[data-card-visual]:visible [class*="inner"][class*="revealed"]').first()).toBeVisible();
     await page.waitForTimeout(750);
     await page.locator('[data-table-scene="spread"]').screenshot({ path: testInfo.outputPath('reveal.png') });
@@ -56,17 +64,23 @@ test('reduced motion has no animated deck and missing manifest can be retried', 
   await page.getByRole('button', { name:'重新加载牌面' }).click();
   await loaded;
   await expect(page.locator('main [role="alert"]')).toHaveCount(0);
-  for (const name of ['我准备好了', '这次不设问题', '开始洗牌']) await page.getByRole('button', { name, exact: true }).click();
+  await page.getByRole('button', { name: '我准备好了', exact: true }).click();
+  await page.getByRole('button', { name: '这次不设问题', exact: true }).click();
+  await page.getByRole('button', { name: '推门' }).click();
+  await page.getByRole('button', { name: '开始洗牌', exact: true }).click();
   expect(await page.locator('[data-shuffle-card]').first().evaluate(el => getComputedStyle(el).animationName)).toBe('none');
   await page.getByRole('button', { name: '为我洗牌' }).click();
   await page.getByRole('button', { name: '让牌落在桌上' }).click();
-  await expect(page.locator('main').getByRole('button', { name: '翻开这一张' }).last()).toBeVisible();
+  await expect(page.locator('main').getByRole('button', { name: '翻开过去' })).toBeVisible();
 });
 
 test('background WebP failure falls back to JPEG without hiding the deck', async ({ page }) => {
   await page.route('**/table/wood-v3.webp', route => route.abort());
   await page.goto('/read');
-  for (const name of ['我准备好了', '这次不设问题', '开始洗牌']) await page.getByRole('button', { name, exact: true }).click();
+  await page.getByRole('button', { name: '我准备好了', exact: true }).click();
+  await page.getByRole('button', { name: '这次不设问题', exact: true }).click();
+  await page.getByRole('button', { name: '推门' }).click();
+  await page.getByRole('button', { name: '开始洗牌', exact: true }).click();
   const background = page.locator('[data-table-background]');
   await expect.poll(() => background.evaluate((image: HTMLImageElement) => image.currentSrc)).toMatch(/wood-v3.jpg$/);
   await expect.poll(() => background.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(1600);
@@ -76,12 +90,19 @@ test('background WebP failure falls back to JPEG without hiding the deck', async
 test('every newly revealed mobile position gets its own flip', async ({ page }) => {
   await page.setViewportSize({ width:390, height:1000 });
   await page.goto('/read');
-  for (const name of ['我准备好了', '这次不设问题', '开始洗牌', '为我洗牌', '让牌落在桌上']) await page.getByRole('button', { name, exact:true }).click({timeout:15000});
-  for (let i = 0; i < 3; i++) {
-    await page.locator('main').getByRole('button', { name:'翻开这一张', exact:true }).last().click();
-    const inner = page.locator('[data-card-visual]:visible [class*="inner"]').first();
-    await expect.poll(() => inner.evaluate(el => el.getAnimations().some(animation => animation.playState === 'running'))).toBe(true);
-    await page.waitForTimeout(700);
-    await expect(inner).toHaveClass(/revealed/);
-  }
+  await page.getByRole('button', { name: '我准备好了', exact: true }).click();
+  await page.getByRole('button', { name: '这次不设问题', exact: true }).click();
+  await page.getByRole('button', { name: '推门' }).click();
+  for (const name of ['开始洗牌', '为我洗牌', '让牌落在桌上']) await page.getByRole('button', { name, exact: true }).click({ timeout: 15000 });
+  const reveal = page.locator('main').locator('[data-reveal="primary"]');
+  await expect(reveal).toBeVisible();
+  await reveal.click();
+  const inner = page.locator('[data-card-visual]:visible [class*="inner"]').first();
+  await expect(inner).not.toHaveClass(/revealed/);
+  await expect.poll(() => inner.evaluate(el => el.getAnimations().some(animation => animation.playState === 'running'))).toBe(true);
+  await expect(inner).not.toHaveClass(/revealed/);
+  const skip = page.getByRole('button', { name: '先不选，看这张牌' });
+  await expect(skip).toBeEnabled();
+  await skip.click();
+  await expect(inner).toHaveClass(/revealed/);
 });

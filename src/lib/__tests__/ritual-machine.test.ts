@@ -14,8 +14,18 @@ function walkToShuffle(): RitualSession {
   let state = createSession();
   state = reduce(state, { type: 'ACK_ENTER' });
   state = reduce(state, { type: 'SUBMIT_QUESTION' });
+  state = reduce(state, { type: 'SET_SCENE', sceneId: 'door' });
   state = reduce(state, { type: 'CONFIRM_SPREAD' });
   return state;
+}
+
+function revealDoorReading(state: RitualSession): RitualSession {
+  state = reduce(state, { type: 'REVEAL_NEXT' });
+  state = reduce(state, { type: 'SKIP_PAUSE' });
+  state = reduce(state, { type: 'REVEAL_NEXT' });
+  state = reduce(state, { type: 'SKIP_PAUSE' });
+  state = reduce(state, { type: 'REVEAL_NEXT' });
+  return reduce(state, { type: 'FUTURE_BEAT_DONE' });
 }
 
 describe('ritual machine', () => {
@@ -68,9 +78,13 @@ describe('ritual machine', () => {
     state = reduce(state, { type: 'DEAL_DONE' });
     expect(state.stage).toBe('reveal');
     state = reduce(state, { type: 'REVEAL_NEXT' });
+    state = reduce(state, { type: 'SKIP_PAUSE' });
     state = reduce(state, { type: 'REVEAL_NEXT' });
     expect(state.stage).toBe('reveal');
+    state = reduce(state, { type: 'SKIP_PAUSE' });
     state = reduce(state, { type: 'REVEAL_NEXT' });
+    expect(state.stage).toBe('reveal');
+    state = reduce(state, { type: 'FUTURE_BEAT_DONE' });
     expect(state.stage).toBe('read');
     if (state.stage === 'read') {
       expect(state.draws).toHaveLength(3);
@@ -91,9 +105,7 @@ describe('ritual machine', () => {
     });
     state = reduce(state, { type: 'CONFIRM_CUT' });
     state = reduce(state, { type: 'DEAL_DONE' });
-    state = reduce(state, { type: 'REVEAL_NEXT' });
-    state = reduce(state, { type: 'REVEAL_NEXT' });
-    state = reduce(state, { type: 'REVEAL_NEXT' });
+    state = revealDoorReading(state);
     expect(state.stage).toBe('read');
     const draws = state.stage === 'read' ? state.draws : [];
     state = reduce(state, { type: 'SET_VIEW', view: 'page' });
@@ -184,9 +196,7 @@ describe('ritual machine', () => {
     });
     state = reduce(state, { type: 'CONFIRM_CUT' });
     state = reduce(state, { type: 'DEAL_DONE' });
-    state = reduce(state, { type: 'REVEAL_NEXT' });
-    state = reduce(state, { type: 'REVEAL_NEXT' });
-    state = reduce(state, { type: 'REVEAL_NEXT' });
+    state = revealDoorReading(state);
     state = reduce(state, { type: 'SET_SAVE_OPTIONS', saveDevice: false, savePrivate: true });
     expect(state.stage === 'read' && state.saveDevice).toBe(true);
     expect(state.stage === 'read' && state.savePrivate).toBe(true);
@@ -208,6 +218,7 @@ describe('ritual machine', () => {
     state = reduce(state, { type: 'ACK_ENTER' });
     state = reduce(state, { type: 'SET_QUESTION', question: '隐私问题' });
     state = reduce(state, { type: 'SUBMIT_QUESTION' });
+    state = reduce(state, { type: 'SET_SCENE', sceneId: 'door' });
     state = reduce(state, { type: 'CONFIRM_SPREAD' });
     state = reduce(state, { type: 'AUTO_SHUFFLE', operationId: 'op' });
     state = reduce(state, {
@@ -220,7 +231,7 @@ describe('ritual machine', () => {
     });
     state = reduce(state, { type: 'CONFIRM_CUT' });
     state = reduce(state, { type: 'DEAL_DONE' });
-    for (let i = 0; i < 3; i += 1) state = reduce(state, { type: 'REVEAL_NEXT' });
+    state = revealDoorReading(state);
     expect(state.stage).toBe('read');
     if (state.stage !== 'read') return;
     state = reduce(state, { type: 'SET_NOTE', note: '秘密留笺' });

@@ -306,21 +306,30 @@ describe('pause gates', () => {
     ]);
   });
 
-  it('does not pause when reduce is called with two arguments', () => {
+  it('pauses a locked three when reduce uses the production default', () => {
     const state = lockedThree();
-    const present = reduce(state, { type: 'REVEAL_POSITION', positionId: 'present' });
+    expect(reduce(state, { type: 'REVEAL_POSITION', positionId: 'present' })).toBe(state);
+    const past = reduce(state, { type: 'REVEAL_NEXT' });
+    expect(past.stage).toBe('reveal');
+    if (past.stage === 'reveal') {
+      expect(past.pause?.positionId).toBe('past');
+      expect(past.revealed).toEqual([]);
+    }
+    expect(reduce(state, { type: 'CHOOSE_PAUSE', actionId: 'name' })).toBe(state);
+    expect(reduce(state, { type: 'SKIP_PAUSE' })).toBe(state);
+    expect(reduce(state, { type: 'FUTURE_BEAT_DONE' })).toBe(state);
+
+    const off = { scenePause: false } as const;
+    const present = reduce(state, { type: 'REVEAL_POSITION', positionId: 'present' }, off);
     expect(present.stage).toBe('reveal');
     if (present.stage === 'reveal') {
       expect(present.pause).toBeNull();
       expect(present.revealed).toEqual(['present']);
     }
-    expect(reduce(state, { type: 'CHOOSE_PAUSE', actionId: 'name' })).toBe(state);
-    expect(reduce(state, { type: 'SKIP_PAUSE' })).toBe(state);
-    expect(reduce(state, { type: 'FUTURE_BEAT_DONE' })).toBe(state);
     let walked = state as RitualSession;
-    walked = reduce(walked, { type: 'REVEAL_NEXT' });
-    walked = reduce(walked, { type: 'REVEAL_NEXT' });
-    walked = reduce(walked, { type: 'REVEAL_NEXT' });
+    walked = reduce(walked, { type: 'REVEAL_NEXT' }, off);
+    walked = reduce(walked, { type: 'REVEAL_NEXT' }, off);
+    walked = reduce(walked, { type: 'REVEAL_NEXT' }, off);
     expect(walked.stage).toBe('read');
     if (walked.stage === 'read') expect(walked.pause).toBeNull();
   });
