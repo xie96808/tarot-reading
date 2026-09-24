@@ -26,6 +26,9 @@ describe('history', () => {
           saved: true,
           savePrivate: false,
           note: '',
+          sceneId: null,
+          pauseAnswers: [],
+          keptPauseIndex: null,
         },
         savedAt: i,
       });
@@ -45,6 +48,9 @@ describe('history', () => {
         saved: true,
         savePrivate: false,
         note: '',
+        sceneId: null,
+        pauseAnswers: [],
+        keptPauseIndex: null,
       },
       savedAt: 99,
     });
@@ -70,6 +76,9 @@ describe('history', () => {
         saved: true,
         savePrivate: false,
         note: '秘密留笺',
+        sceneId: null,
+        pauseAnswers: [],
+        keptPauseIndex: null,
       },
       question: '秘密问题',
       note: '秘密留笺',
@@ -98,6 +107,9 @@ describe('history', () => {
         saved: true,
         savePrivate: true,
         note: '留笺',
+        sceneId: null,
+        pauseAnswers: [],
+        keptPauseIndex: null,
       },
       question: '可保存',
       note: '留笺',
@@ -107,6 +119,38 @@ describe('history', () => {
     expect(entry.question).toBe('可保存');
     expect(entry.note).toBe('留笺');
     expect(entry.receipt.question).toBe('可保存');
+  });
+
+  it('strips pause answers and custom text from a non-private receipt', () => {
+    pushHistory({
+      receipt: {
+        sessionId: 'priv-3',
+        spreadId: 'three',
+        question: '秘密问题',
+        reversals: true,
+        cutIndex: 1,
+        commitShort: 'e'.repeat(16),
+        draws: [],
+        revealedOrder: [],
+        completedAt: 3,
+        saved: true,
+        savePrivate: false,
+        note: '秘密留笺',
+        sceneId: 'door',
+        pauseAnswers: [
+          { index: 1, positionId: 'past', kind: 'action', actionId: 'name', custom: '自写不该留下' },
+        ],
+        keptPauseIndex: 1,
+      },
+      question: '秘密问题',
+      note: '秘密留笺',
+      savedAt: 3,
+    });
+    const [entry] = loadHistory();
+    expect(entry.receipt.sceneId).toBeNull();
+    expect(entry.receipt.pauseAnswers).toEqual([]);
+    expect(entry.receipt.keptPauseIndex).toBeNull();
+    expect(JSON.stringify(entry)).not.toContain('自写不该留下');
   });
 });
 

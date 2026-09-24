@@ -1,5 +1,8 @@
+import { MAX_PAUSE_LINE_CODEPOINTS } from '@/config/site';
 import type { CardId } from '@/data/card-ids';
+import { lookupPauseOffer } from '@/data/lexicons/zh-1/pauses/examples';
 import { SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
+import { nextGatedPosition, shouldOpenPauseText } from '@/lib/pause';
 import { HAND_SCENE_ENABLED, SCENE_PAUSE_ENABLED, type SceneId } from '@/lib/scene';
 import { cutDeck, drawTop, type Draw, type Orientation, type ShuffledCard } from '@/lib/shuffle';
 
@@ -29,6 +32,9 @@ export type ReadingReceipt = {
   saved: boolean;
   savePrivate: boolean;
   note: string;
+  sceneId: SceneId | null;
+  pauseAnswers: PauseAnswer[];
+  keptPauseIndex: PauseIndex | null;
 };
 
 type Base = {
@@ -39,7 +45,27 @@ type Base = {
   abandonOpen: boolean;
   sceneId: SceneId | null;
   sceneLocked: boolean;
+  pause: PauseDraft | null;
+  pauseAnswers: PauseAnswer[];
+  keptPauseIndex: PauseIndex | null;
+  futureBeat: null | 'open';
 };
+
+export type PausePositionId = 'past' | 'present';
+export type PauseIndex = 1 | 2;
+
+export type PauseDraft = {
+  positionId: PausePositionId;
+  index: PauseIndex;
+  phase: 'choosing' | 'writing';
+  actionId: string | null;
+  custom: string;
+};
+
+export type PauseAnswer =
+  | { index: PauseIndex; positionId: PausePositionId; kind: 'skip' }
+  | { index: PauseIndex; positionId: PausePositionId; kind: 'missing' }
+  | { index: PauseIndex; positionId: PausePositionId; kind: 'action'; actionId: string; custom: string };
 
 export type RitualSession =
   | (Base & { stage: 'enter' | 'question' | 'spread' })
@@ -97,6 +123,13 @@ export type RitualEvent =
   | { type: 'REVEAL_POSITION'; positionId: string }
   | { type: 'REVEAL_NEXT' }
   | { type: 'STEP_SELECTION'; delta: -1 | 1 }
+  | { type: 'CHOOSE_PAUSE'; actionId: string }
+  | { type: 'SET_PAUSE_CUSTOM'; custom: string }
+  | { type: 'CONFIRM_PAUSE' }
+  | { type: 'SKIP_PAUSE' }
+  | { type: 'REVERT_PAUSE' }
+  | { type: 'FUTURE_BEAT_DONE' }
+  | { type: 'SET_KEPT_PAUSE'; index: PauseIndex }
   | { type: 'SET_NOTE'; note: string }
   | { type: 'SET_SAVE_OPTIONS'; saveDevice: boolean; savePrivate: boolean }
   | { type: 'SET_VIEW'; view: 'table' | 'page' }
@@ -117,6 +150,10 @@ export function createSession(): RitualSession {
     abandonOpen: false,
     sceneId: null,
     sceneLocked: false,
+    pause: null,
+    pauseAnswers: [],
+    keptPauseIndex: null,
+    futureBeat: null,
   };
 }
 
@@ -182,8 +219,14 @@ export function reduce(
       if (event.type === 'DEAL_DONE') return { ...state, stage: 'reveal' };
       return state;
     case 'reveal':
-      return reduceReveal(state, event);
+      return reduceReveal(state, event, scenePause);
     case 'read':
+      if (event.type === 'SET_KEPT_PAUSE') {
+        if (!scenePause) return state;
+        const answer = state.pauseAnswers.find((item) => item.index === event.index);
+        if (!answer || answer.kind !== 'action') return state;
+        return { ...state, keptPauseIndex: event.index };
+      }
       if (event.type === 'SET_NOTE') return { ...state, note: event.note };
       if (event.type === 'SET_SAVE_OPTIONS') {
         const coupled = coupleSaveOptions(
@@ -194,6 +237,10 @@ export function reduce(
       }
       if (event.type === 'SET_VIEW') return { ...state, view: event.view };
       if (event.type === 'CLOSE_ACK') {
+        if (scenePause) {
+          const keepable = state.pauseAnswers.filter((answer) => answer.kind === 'action');
+          if (keepable.length === 2 && state.keptPauseIndex === null) return state;
+        }
         const keepPrivate = state.savePrivate;
         const receipt: ReadingReceipt = {
           sessionId: state.sessionId,
@@ -208,17 +255,24 @@ export function reduce(
           saved: state.saveDevice,
           savePrivate: state.savePrivate,
           note: keepPrivate ? state.note : '',
+          sceneId: keepPrivate ? state.sceneId : null,
+          pauseAnswers: keepPrivate ? state.pauseAnswers : [],
+          keptPauseIndex: keepPrivate ? state.keptPauseIndex : null,
         };
         return {
           sessionId: state.sessionId,
           stage: 'close',
-          // Session resume/share UI can still show the live question; receipt is what history persists.
+          // The end screen reads this copy. History persists the receipt, without pause text unless private.
           question: state.question,
           spreadId: state.spreadId,
           reversals: state.reversals,
           abandonOpen: false,
           sceneId: state.sceneId,
           sceneLocked: state.sceneLocked,
+          pause: state.pause,
+          pauseAnswers: state.pauseAnswers,
+          keptPauseIndex: state.keptPauseIndex,
+          futureBeat: state.futureBeat,
           receipt,
         };
       }
@@ -266,6 +320,10 @@ function reduceShuffle(
       abandonOpen: false,
       sceneId: state.sceneId,
       sceneLocked: state.sceneLocked,
+      pause: state.pause,
+      pauseAnswers: state.pauseAnswers,
+      keptPauseIndex: state.keptPauseIndex,
+      futureBeat: state.futureBeat,
       operationId: null,
       deckPreCut: event.deckPreCut,
       commitFull: event.commitFull,
@@ -314,6 +372,10 @@ function reduceCut(
       abandonOpen: false,
       sceneId: state.sceneId,
       sceneLocked: state.sceneLocked,
+      pause: state.pause,
+      pauseAnswers: state.pauseAnswers,
+      keptPauseIndex: state.keptPauseIndex,
+      futureBeat: state.futureBeat,
       deckPreCut: state.deckPreCut,
       commitFull: state.commitFull,
       commitShort: state.commitShort,
@@ -330,10 +392,160 @@ function reduceCut(
   return state;
 }
 
-function reduceReveal(
-  state: Extract<RitualSession, { stage: 'reveal' }>,
-  event: RitualEvent,
-): RitualSession {
+type RevealState = Extract<RitualSession, { stage: 'reveal' }>;
+
+function pauseSlot(positionId: string): { positionId: PausePositionId; index: PauseIndex } | null {
+  const position = SPREADS.three.positions.find((item) => item.id === positionId);
+  if (position?.id === 'past' && position.drawOrder === 1) return { positionId: 'past', index: 1 };
+  if (position?.id === 'present' && position.drawOrder === 2) return { positionId: 'present', index: 2 };
+  return null;
+}
+
+function commitPauseAnswer(state: RevealState, answer: PauseAnswer): RitualSession {
+  if (state.pauseAnswers.some((existing) => existing.index === answer.index)) return state;
+  const pauseAnswers = [...state.pauseAnswers, answer];
+  const revealed = state.revealed.includes(answer.positionId)
+    ? state.revealed
+    : [...state.revealed, answer.positionId];
+  const keepable = pauseAnswers.filter((item) => item.kind === 'action');
+  return {
+    ...state,
+    pauseAnswers,
+    revealed,
+    selectedPositionId: answer.positionId,
+    pause: null,
+    keptPauseIndex: keepable.length === 1 ? keepable[0].index : null,
+  };
+}
+
+function revealGated(state: RevealState, positionId: string): RitualSession {
+  if (state.revealed.includes(positionId)) return state;
+  const slot = pauseSlot(positionId);
+  if (!slot) {
+    const revealed = [...state.revealed, positionId];
+    const complete = positions(state.spreadId).every((position) => revealed.includes(position.id));
+    return {
+      ...state,
+      revealed,
+      selectedPositionId: positionId,
+      stage: 'reveal',
+      pause: null,
+      futureBeat: complete ? 'open' : state.futureBeat,
+    };
+  }
+  const draw = state.draws.find((item) => item.positionId === slot.positionId);
+  const offer = draw && state.sceneId
+    ? lookupPauseOffer(state.sceneId, draw.cardId, draw.orientation, slot.index)
+    : null;
+  if (!offer) {
+    return commitPauseAnswer(state, {
+      index: slot.index,
+      positionId: slot.positionId,
+      kind: 'missing',
+    });
+  }
+  return {
+    ...state,
+    selectedPositionId: slot.positionId,
+    pause: {
+      positionId: slot.positionId,
+      index: slot.index,
+      phase: 'choosing',
+      actionId: null,
+      custom: '',
+    },
+  };
+}
+
+function reducePauseChoice(state: RevealState, event: RitualEvent): RitualSession {
+  if (!state.pause) return state;
+  if (state.pauseAnswers.some((answer) => answer.index === state.pause?.index)) return state;
+  const draft = state.pause;
+  if (event.type === 'SKIP_PAUSE') {
+    if (draft.phase !== 'choosing') return state;
+    return commitPauseAnswer(state, { index: draft.index, positionId: draft.positionId, kind: 'skip' });
+  }
+  if (event.type === 'REVERT_PAUSE') {
+    if (draft.phase !== 'writing') return state;
+    return { ...state, pause: { ...draft, phase: 'choosing', actionId: null, custom: '' } };
+  }
+  if (event.type === 'SET_PAUSE_CUSTOM') {
+    if (draft.phase !== 'writing') return state;
+    if ([...event.custom].length > MAX_PAUSE_LINE_CODEPOINTS) return state;
+    return { ...state, pause: { ...draft, custom: event.custom } };
+  }
+  if (event.type === 'CONFIRM_PAUSE') {
+    if (draft.phase !== 'writing' || draft.actionId === null) return state;
+    return commitPauseAnswer(state, {
+      index: draft.index,
+      positionId: draft.positionId,
+      kind: 'action',
+      actionId: draft.actionId,
+      custom: draft.custom,
+    });
+  }
+  if (event.type === 'CHOOSE_PAUSE') {
+    if (draft.phase !== 'choosing') return state;
+    const draw = state.draws.find((item) => item.positionId === draft.positionId);
+    if (!draw || !state.sceneId) return state;
+    const offer = lookupPauseOffer(state.sceneId, draw.cardId, draw.orientation, draft.index);
+    const chosen = offer?.actions.find((item) => item.id === event.actionId);
+    if (!offer || !chosen) return state;
+    if (shouldOpenPauseText(chosen.kind)) {
+      return { ...state, pause: { ...draft, phase: 'writing', actionId: chosen.id, custom: '' } };
+    }
+    return commitPauseAnswer(state, {
+      index: draft.index,
+      positionId: draft.positionId,
+      kind: 'action',
+      actionId: chosen.id,
+      custom: '',
+    });
+  }
+  return state;
+}
+
+function reduceReveal(state: RevealState, event: RitualEvent, scenePause: boolean): RitualSession {
+  const gated = scenePause && state.spreadId === 'three' && state.sceneLocked;
+  if (!gated) return reduceRevealUngated(state, event);
+  if (event.type === 'FUTURE_BEAT_DONE') {
+    if (state.futureBeat !== 'open') return state;
+    const ids = positions(state.spreadId).map((position) => position.id);
+    if (!ids.every((id) => state.revealed.includes(id))) return state;
+    return { ...state, stage: 'read', futureBeat: null };
+  }
+  const navigationLocked = state.pause !== null || state.futureBeat === 'open';
+  if (
+    navigationLocked &&
+    (event.type === 'SELECT_POSITION' ||
+      event.type === 'STEP_SELECTION' ||
+      event.type === 'REVEAL_POSITION' ||
+      event.type === 'REVEAL_NEXT')
+  ) {
+    return state;
+  }
+  if (event.type === 'SELECT_POSITION') {
+    const valid = new Set(state.draws.map((draw) => draw.positionId));
+    if (!valid.has(event.positionId)) return state;
+    return { ...state, selectedPositionId: event.positionId };
+  }
+  if (event.type === 'STEP_SELECTION') {
+    return {
+      ...state,
+      selectedPositionId: stepPositionId(state.spreadId, state.selectedPositionId, event.delta),
+    };
+  }
+  if (event.type === 'REVEAL_POSITION' || event.type === 'REVEAL_NEXT') {
+    const gatedId = nextGatedPosition(state);
+    const target = event.type === 'REVEAL_NEXT' ? gatedId : event.positionId;
+    if (!target || target !== gatedId) return state;
+    return revealGated(state, target);
+  }
+  if (event.type === 'SET_VIEW') return { ...state, view: event.view };
+  return reducePauseChoice(state, event);
+}
+
+function reduceRevealUngated(state: RevealState, event: RitualEvent): RitualSession {
   if (state.stage !== 'reveal') return state;
   const valid = new Set(state.draws.map((d) => d.positionId));
   if (event.type === 'SELECT_POSITION' && valid.has(event.positionId)) {
@@ -363,7 +575,7 @@ function reduceReveal(
       : null;
     const nextId = selectedOpen ?? firstUnrevealed(state);
     if (!nextId) return state;
-    return reduceReveal(state, { type: 'REVEAL_POSITION', positionId: nextId });
+    return reduceRevealUngated(state, { type: 'REVEAL_POSITION', positionId: nextId });
   }
   if (event.type === 'SET_VIEW') return { ...state, view: event.view };
   return state;
@@ -379,6 +591,10 @@ export function persistable(state: RitualSession): RitualSession {
   if (state.stage === 'read') {
     const flags = normalizeSaveOptions(state);
     return { ...state, abandonOpen: false, saveDevice: flags.saveDevice, savePrivate: flags.savePrivate };
+  }
+  if (state.stage === 'reveal' && state.futureBeat === 'open') {
+    // An open future beat is not writable: old clients only mount the reading from stage 'read'.
+    return { ...state, stage: 'read', futureBeat: null, abandonOpen: false };
   }
   return { ...state, abandonOpen: false };
 }
