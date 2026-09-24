@@ -13,6 +13,14 @@ export const MOTION = {
   uprightPauseMs: 240,
   uprightMs: 780,
   readFadeMs: 420,
+  seamLeadMs: 200,
+  seamMs: 280,
+  sceneCompleteMs: 280,
+  palmMs: 480,
+  settleMs: 360,
+  seamPx: 12,
+  partialTurnDeg: 126,
+  palmShiftPct: 12,
 } as const;
 
 export function prefersReducedMotion(): boolean {

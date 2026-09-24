@@ -188,6 +188,52 @@
   font-size: 13px;
 }
 
+.scenePicker {
+  background: var(--parchment);
+  color: var(--ink);
+  padding: var(--space-4);
+  text-align: left;
+}
+
+.scenePicker h2 {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.sceneChoices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.center .scenePicker button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: var(--button-h);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--ash);
+  text-align: left;
+  text-transform: none;
+}
+
+.center .scenePicker button[disabled] {
+  color: var(--ash);
+}
+
+.revealBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-start;
+  justify-content: center;
+}
+
 .viewSwitch {
   display: flex;
   justify-content: center;
