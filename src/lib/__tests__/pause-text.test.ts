@@ -113,10 +113,14 @@ describe('pause text', () => {
       sceneId: 'hand',
       draws: threeDraws({ cardId: 'pents_01_ace' }, { cardId: 'pents_page' }),
     });
-    const past = reduce(openPast(hand), { type: 'SKIP_PAUSE' }, sceneOn);
+    const past = openPast(hand);
+    expect(past.pause).toBeNull();
+    expect(past.pauseAnswers[0]).toMatchObject({ index: 1, positionId: 'past', kind: 'missing' });
     const present = openPast(past);
+    expect(present.pause).toBeNull();
+    expect(present.pauseAnswers[1]).toMatchObject({ index: 2, positionId: 'present', kind: 'missing' });
     expect(reduce(present, { type: 'CHOOSE_PAUSE', actionId: 'look' }, sceneOn)).toBe(present);
-    expect(asReveal(reduce(present, { type: 'CHOOSE_PAUSE', actionId: 'craft' }, sceneOn)).pause?.phase).toBe('writing');
+    expect(reduce(present, { type: 'CHOOSE_PAUSE', actionId: 'craft' }, sceneOn)).toBe(present);
   });
 
   it('sets keptPauseIndex only when exactly one answer can be kept', () => {
@@ -126,7 +130,7 @@ describe('pause text', () => {
     expect(asReveal(oneKept).keptPauseIndex).toBe(1);
     expect(asReveal(oneKept).pauseAnswers.map((answer) => answer.kind)).toEqual(['action', 'skip']);
 
-    const missingPast = openPast(locked({ draws: threeDraws({ cardId: 'swords_01_ace' }) }));
+    const missingPast = openPast(locked({ draws: threeDraws({ cardId: 'not_in_door_catalog' as CardId }) }));
     expect(missingPast.pauseAnswers[0]?.kind).toBe('missing');
     const presentAction = confirm(openPast(missingPast), 'level', '');
     expect(asReveal(presentAction).keptPauseIndex).toBe(2);

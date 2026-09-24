@@ -1,6 +1,6 @@
 import { MAX_PAUSE_LINE_CODEPOINTS } from '@/config/site';
 import type { CardId } from '@/data/card-ids';
-import { lookupPauseOffer } from '@/data/lexicons/zh-1/pauses/examples';
+import { lookupPauseOffer } from '@/data/lexicons/zh-1/pauses';
 import { SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
 import { nextGatedPosition, shouldOpenPauseText } from '@/lib/pause';
 import { HAND_SCENE_ENABLED, SCENE_PAUSE_ENABLED, type SceneId } from '@/lib/scene';
