@@ -524,16 +524,8 @@ function reduceReveal(state: RevealState, event: RitualEvent, scenePause: boolea
   ) {
     return state;
   }
-  if (event.type === 'SELECT_POSITION') {
-    const valid = new Set(state.draws.map((draw) => draw.positionId));
-    if (!valid.has(event.positionId)) return state;
-    return { ...state, selectedPositionId: event.positionId };
-  }
-  if (event.type === 'STEP_SELECTION') {
-    return {
-      ...state,
-      selectedPositionId: stepPositionId(state.spreadId, state.selectedPositionId, event.delta),
-    };
+  if (event.type === 'SELECT_POSITION' || event.type === 'STEP_SELECTION' || event.type === 'SET_VIEW') {
+    return reduceRevealUngated(state, event);
   }
   if (event.type === 'REVEAL_POSITION' || event.type === 'REVEAL_NEXT') {
     const gatedId = nextGatedPosition(state);
@@ -541,7 +533,6 @@ function reduceReveal(state: RevealState, event: RitualEvent, scenePause: boolea
     if (!target || target !== gatedId) return state;
     return revealGated(state, target);
   }
-  if (event.type === 'SET_VIEW') return { ...state, view: event.view };
   return reducePauseChoice(state, event);
 }
 
