@@ -39,7 +39,7 @@ export const COPY = {
   reverseHint: '把内在、受阻或过度的状态也纳入阅读。逆位不等于坏牌。',
   spreadConfirm: '开始洗牌',
   shuffleTitle: '把问题放轻，把牌打散。',
-  shuffleHold: '按住牌桌，手会帮你把牌打散；松手即封存。',
+  shuffleHold: '按住牌堆或空格键洗牌，松开后归拢并封存。',
   shuffleAuto: '为我洗牌',
   shuffleCommitting: '正在封存',
   shuffleSealed: '牌序已封存',

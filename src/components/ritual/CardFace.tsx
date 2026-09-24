@@ -16,6 +16,7 @@ export function CardFace({ urls, sizes, alt }: CardFaceProps) {
   const sources = pictureSources(urls, sizes);
   const [failed, setFailed] = useState(false);
   const [nonce, setNonce] = useState(0);
+  const [loaded, setLoaded] = useState(false);
   if (failed) {
     return (
       <div className={styles.fallback}>
@@ -24,6 +25,7 @@ export function CardFace({ urls, sizes, alt }: CardFaceProps) {
           type="button"
           onClick={() => {
             setFailed(false);
+            setLoaded(false);
             setNonce((n) => n + 1);
           }}
         >
@@ -33,11 +35,14 @@ export function CardFace({ urls, sizes, alt }: CardFaceProps) {
     );
   }
   return (
+    <div className={styles.frame}>
+    {!loaded ? <span className={styles.loading} role="status">牌面载入中…</span> : null}
     <picture>
       <source type="image/webp" srcSet={sources.webpSrcSet} sizes={sizes} />
       <img
         key={nonce}
-        className={styles.face}
+        className={`${styles.face} ${loaded ? styles.loaded : ''}`}
+        onLoad={() => setLoaded(true)}
         src={sources.jpegSrc}
         srcSet={sources.jpegSrcSet}
         sizes={sizes}
@@ -48,5 +53,6 @@ export function CardFace({ urls, sizes, alt }: CardFaceProps) {
         draggable={false}
       />
     </picture>
+    </div>
   );
 }

@@ -11,12 +11,12 @@ export function Header() {
   const router = useRouter();
 
   function go(href: string) {
+    const stage = pathname.startsWith('/read') ? loadSession()?.stage ?? null : null;
     if (href === '/read') {
-      const session = loadSession();
       const action = startNavAction({
         fromPath: pathname,
         toPath: '/read',
-        progress: ritualProgress(session?.stage ?? null),
+        progress: ritualProgress(stage),
       });
       if (action === 'confirm-restart') {
         if (!window.confirm(COPY.resumeRestartConfirm)) return;
@@ -28,7 +28,7 @@ export function Header() {
       if (pathname !== '/read') router.push('/read');
       return;
     }
-    if (shouldConfirmLeave(pathname, href) && !window.confirm(COPY.navLeaveHint)) return;
+    if (shouldConfirmLeave(pathname, href, stage) && !window.confirm(COPY.navLeaveHint)) return;
     router.push(href);
   }
 

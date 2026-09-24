@@ -1,26 +1,8 @@
 'use client';
 
-import type { PointerEventHandler, ReactNode } from 'react';
+import { useState, type CSSProperties, type PointerEventHandler, type ReactNode } from 'react';
 import type { TableHandMode } from '@/lib/table-hands';
 import styles from './TableScene.module.css';
-
-const HAND_SRC: Record<Exclude<TableHandMode, 'none'>, { webp: string; jpeg: string; alt: string }> = {
-  idle: {
-    webp: '/table/hands-idle.webp',
-    jpeg: '/table/hands-idle.jpg',
-    alt: '',
-  },
-  riffle: {
-    webp: '/table/hands-riffle.webp',
-    jpeg: '/table/hands-riffle.jpg',
-    alt: '',
-  },
-  cut: {
-    webp: '/table/hands-cut.webp',
-    jpeg: '/table/hands-cut.jpg',
-    alt: '',
-  },
-};
 
 type TableSceneProps = {
   hand: TableHandMode;
@@ -30,58 +12,33 @@ type TableSceneProps = {
   onPointerUp?: PointerEventHandler<HTMLDivElement>;
   onPointerCancel?: PointerEventHandler<HTMLDivElement>;
   label?: string;
-  feedbackLabel?: string;
   layout?: 'play' | 'spread';
+  paused?: boolean;
 };
 
-export function TableScene({
-  hand,
-  children,
-  onPointerDown,
-  onPointerMove,
-  onPointerUp,
-  onPointerCancel,
-  label,
-  feedbackLabel = '查看牌堆示意',
-  layout = 'play',
-}: TableSceneProps) {
-  const interactive = Boolean(onPointerDown);
-  const src = hand === 'none' ? null : HAND_SRC[hand];
-  const photograph = (
-    <picture className={styles.surface}>
-      <source type="image/webp" srcSet={src?.webp ?? '/table/surface.webp'} />
-      <img src={src?.jpeg ?? '/table/surface.jpg'} alt="" width={1600} height={900} draggable={false} />
-    </picture>
-  );
-
-  if (layout === 'spread') {
-    return (
-      <div className={`${styles.scene} ${styles.spread}`} data-table-scene="spread">
-        {photograph}
-        <div className={styles.felt}>{children}</div>
-      </div>
-    );
-  }
-
+/** One stationary background; mat, light and real cards are independent layers. */
+export function TableScene({ hand, children, onPointerDown, onPointerMove, onPointerUp,
+  onPointerCancel, label, layout = 'play', paused = false }: TableSceneProps) {
+  const [jpegFallback, setJpegFallback] = useState(false);
   return (
-    <div className={styles.wrap}>
-      <div
-        className={`${styles.scene} ${styles.photo} ${interactive ? styles.grab : ''}`}
-        data-table-scene="photo"
-        data-hand={hand}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        role="img"
-        aria-label={label}
-      >
-        {photograph}
+    <div className={`${styles.scene} ${styles[layout]} ${onPointerDown ? styles.grab : ''}`}
+      data-table-scene={layout} data-hand={hand} data-paused={paused}
+      onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel} aria-label={label} role={layout === 'play' ? 'img' : undefined}>
+      <picture className={styles.surface}>
+        {!jpegFallback ? <source type="image/webp" srcSet="/table/wood-v3.webp" /> : null}
+        <img data-table-background src="/table/wood-v3.jpg" alt="" width={1600} height={900} draggable={false} onError={(event) => {
+          if (!jpegFallback) setJpegFallback(true);
+          else event.currentTarget.style.opacity = '0';
+        }} />
+      </picture>
+      <div className={styles.mat} aria-hidden="true" />
+      <div className={styles.light} aria-hidden="true" />
+      <div className={styles.motes} aria-hidden="true">
+        {Array.from({ length: 6 }, (_, i) => <i key={i} style={{ '--m': i } as CSSProperties} />)}
       </div>
-      <details className={styles.feedback}>
-        <summary>{feedbackLabel}</summary>
-        <div className={styles.diagram}>{children}</div>
-      </details>
+      <span className={styles.inscription} aria-hidden="true">✦ &nbsp; 烛下 · 此刻 &nbsp; ✦</span>
+      <div className={styles.content}>{children}</div>
     </div>
   );
 }

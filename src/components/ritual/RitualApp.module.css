@@ -256,11 +256,11 @@
 .dealSource {
   position: absolute;
   left: 50%;
-  top: 8%;
-  width: 72px;
-  margin-left: -36px;
+  top: -64px;
+  width: 48px;
+  margin-left: -24px;
   z-index: 3;
-  animation: sourceToss 1.8s ease both;
+  opacity: .72;
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.4));
 }
 

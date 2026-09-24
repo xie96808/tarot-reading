@@ -17,6 +17,8 @@
 单实例systemd restart有短暂切换窗口，不是零停机滚动发布。
 串行工作流不取消正在发布的作业；拥堵时GitHub可能合并待执行推送，最新main进入队列。
 
+上传使用已打包的 `release.tar.gz`：rsync 不再二次 `-z`/`--checksum`（activate 仍校验 sha256），并开启 SSH keepalive 与最多 3 次 rsync 重试。工作流超时 45 分钟。
+
 ## 磁盘策略
 
 - 最多保留3个自动版本，保护current和previous。

@@ -202,4 +202,36 @@ describe('ritual machine', () => {
     expect(state.stage).toBe('enter');
     expect(state.sessionId).not.toBe(oldId);
   });
+
+  it('CLOSE_ACK strips question/note from receipt when savePrivate is false', () => {
+    let state = createSession();
+    state = reduce(state, { type: 'ACK_ENTER' });
+    state = reduce(state, { type: 'SET_QUESTION', question: '隐私问题' });
+    state = reduce(state, { type: 'SUBMIT_QUESTION' });
+    state = reduce(state, { type: 'CONFIRM_SPREAD' });
+    state = reduce(state, { type: 'AUTO_SHUFFLE', operationId: 'op' });
+    state = reduce(state, {
+      type: 'SHUFFLE_COMMITTED',
+      sessionId: state.sessionId,
+      operationId: 'op',
+      deckPreCut: fakeDeck(),
+      commitFull: 'e'.repeat(64),
+      commitShort: 'e'.repeat(16),
+    });
+    state = reduce(state, { type: 'CONFIRM_CUT' });
+    state = reduce(state, { type: 'DEAL_DONE' });
+    for (let i = 0; i < 3; i += 1) state = reduce(state, { type: 'REVEAL_NEXT' });
+    expect(state.stage).toBe('read');
+    if (state.stage !== 'read') return;
+    state = reduce(state, { type: 'SET_NOTE', note: '秘密留笺' });
+    state = reduce(state, { type: 'SET_SAVE_OPTIONS', saveDevice: true, savePrivate: false });
+    state = reduce(state, { type: 'CLOSE_ACK' });
+    expect(state.stage).toBe('close');
+    if (state.stage !== 'close') return;
+    expect(state.receipt.savePrivate).toBe(false);
+    expect(state.receipt.question).toBe('');
+    expect(state.receipt.note).toBe('');
+    expect(state.question).toBe('隐私问题');
+  });
+
 });

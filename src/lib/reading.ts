@@ -114,7 +114,8 @@ export function buildPositionReadings(
       nameZh: card.nameZh,
       orientation: draw.orientation,
       keywords: meaning.keywords,
-      meaning: meaning.meaning,
+      // Position-aware lead so past/future/outcome don't read as a naked lexicon dump.
+      meaning: `在「${position.nameZh}」这个位置上，${meaning.meaning}`,
       reflection: meaning.reflection,
     };
   });
@@ -154,14 +155,10 @@ export function relationForEdge(
       text: `${left.positionNameZh}关乎${THEME_ZH[leftM.theme]}，${right.positionNameZh}关乎${THEME_ZH[rightM.theme]}；先读作需要协调的两种需求，而不是互相抵消。`,
     };
   }
-  const turning =
-    leftM.mode !== rightM.mode &&
-    (leftM.mode === 'inward' ||
-      leftM.mode === 'blocked' ||
-      leftM.mode === 'excess' ||
-      rightM.mode === 'inward' ||
-      rightM.mode === 'blocked' ||
-      rightM.mode === 'excess');
+  // R3 only when both ends are charged modes that differ — avoids flow↔anything sweeping to R3.
+  const charged = (mode: typeof leftM.mode) =>
+    mode === 'inward' || mode === 'blocked' || mode === 'excess';
+  const turning = leftM.mode !== rightM.mode && charged(leftM.mode) && charged(rightM.mode);
   if (turning) {
     const connector = isTime ? `从${left.positionNameZh}到${right.positionNameZh}` : `${left.positionNameZh}与${right.positionNameZh}`;
     return {

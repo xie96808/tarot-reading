@@ -20,6 +20,7 @@ type Card3DProps = {
   crossing?: boolean;
   dealDelayMs?: number;
   dealing?: boolean;
+  animateOnMount?: boolean;
 };
 
 export function Card3D({
@@ -33,17 +34,19 @@ export function Card3D({
   crossing,
   dealDelayMs = 0,
   dealing = false,
+  animateOnMount = false,
 }: Card3DProps) {
   const [presentation, setPresentation] = useState({
     revealed,
-    flipped: revealed,
-    view: (revealed && reversed ? 'readable' : 'as-dealt') as FaceView,
+    flipped: revealed && !animateOnMount,
+    view: (revealed && reversed && !animateOnMount ? 'readable' : 'as-dealt') as FaceView,
     manual: false,
+    justRevealed: animateOnMount,
   });
 
   // Reset on the prop transition during render, before children commit stale state.
   if (presentation.revealed !== revealed) {
-    setPresentation({ revealed, flipped: false, view: 'as-dealt', manual: false });
+    setPresentation({ revealed, flipped: false, view: 'as-dealt', manual: false, justRevealed: revealed });
   }
   const { flipped, view } = presentation;
 
@@ -64,23 +67,27 @@ export function Card3D({
 
   return (
     <div
+      data-deal-card={dealing || undefined}
+      data-card-visual
       className={`${styles.slot} ${crossing ? styles.crossing : ''} ${dealing ? styles.dealing : ''}`}
       style={
         {
+          '--deal-ms': `${MOTION.dealFlightMs}ms`,
+          '--flip-ms': `${MOTION.flipMs}ms`,
           '--deal-delay': `${dealDelayMs}ms`,
           '--upright-ms': `${MOTION.uprightMs}ms`,
         } as CSSProperties
       }
     >
       <div className={styles.flip}>
-        <span className={`${styles.glow} ${flipped ? styles.glowing : ''}`} aria-hidden="true" />
+        <span className={`${styles.glow} ${flipped && presentation.justRevealed ? styles.glowing : ''}`} aria-hidden="true" />
         <div className={`${styles.inner} ${flipped ? styles.revealed : ''}`}>
           <div className={styles.back}>
             <CardBack alt={revealed ? '' : alt} />
           </div>
           <div className={styles.front}>
             <div className={styles.orient} style={{ transform: `rotate(${rotation}deg)` }}>
-              {revealed && urls ? <CardFace urls={urls} sizes={sizes} alt={alt} /> : null}
+              {revealed ? urls ? <CardFace key={urls.digest} urls={urls} sizes={sizes} alt={alt} /> : <div className={styles.waiting} role="status">正在准备牌面…</div> : null}
             </div>
           </div>
         </div>

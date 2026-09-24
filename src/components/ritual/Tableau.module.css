@@ -145,3 +145,7 @@
   .presentSlot > div > button { transform: translateY(76px); }
   .celticSlot > div > button { padding-inline: 4px; font-size: 12px; }
 }
+
+.step { animation: stepArrive 320ms ease both; }
+@keyframes stepArrive { from { opacity: .45; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .step { animation: none; } }

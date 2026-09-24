@@ -30,7 +30,7 @@ test('visibility event cancels a held shuffle immediately', async ({ page }) => 
   await page.getByRole('button', { name: '我准备好了' }).click();
   await page.getByRole('button', { name: '这次不设问题' }).click();
   await page.getByRole('button', { name: '开始洗牌' }).click();
-  const scene = page.locator('[data-table-scene="photo"]');
+  const scene = page.locator('[data-table-scene="play"]');
   await page.keyboard.down('Space');
   await expect(scene).toHaveAttribute('data-hand', 'riffle');
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });

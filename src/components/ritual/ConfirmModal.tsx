@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode, type MouseEvent } from 'react';
+import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
 import styles from './RitualApp.module.css';
 
 export function ConfirmModal({
@@ -18,6 +18,10 @@ export function ConfirmModal({
     const node = root.current;
     if (!node) return;
     node.showModal();
+    const safe =
+      node.querySelector<HTMLElement>('[data-safe-focus]') ??
+      [...node.querySelectorAll<HTMLElement>('button')].at(-1);
+    safe?.focus();
     const onCancelEvent = (event: Event) => {
       event.preventDefault();
       onCancel();
