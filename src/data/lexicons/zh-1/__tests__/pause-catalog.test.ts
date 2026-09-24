@@ -7,6 +7,8 @@ import { DOOR_MAJOR_OFFERS } from '../pauses/door-majors';
 import { DOOR_PENTS_OFFERS } from '../pauses/door-pents';
 import { DOOR_SWORDS_OFFERS } from '../pauses/door-swords';
 import { DOOR_WANDS_OFFERS } from '../pauses/door-wands';
+import { HAND_CUPS_OFFERS } from '../pauses/hand-cups';
+import { HAND_MAJOR_OFFERS } from '../pauses/hand-majors';
 import { lookupPauseOffer } from '../pauses/examples';
 import type { PauseOffer } from '../pauses/types';
 import { validateDoorOffers } from '../pauses/validate';
@@ -199,6 +201,89 @@ describe('door swords and wands pause catalog', () => {
     );
     expect([...swordKeys].sort()).toEqual([...coverKeys(SWORD_IDS)].sort());
     expect([...wandKeys].sort()).toEqual([...coverKeys(WAND_IDS)].sort());
+  });
+});
+
+const CUP_COURT_IDS = new Set(['cups_page', 'cups_knight', 'cups_queen', 'cups_king']);
+
+describe('hand majors and cups pause catalog', () => {
+  it('returns no skeleton failures', () => {
+    expect(validateDoorOffers(HAND_MAJOR_OFFERS, 'hand')).toEqual([]);
+    expect(validateDoorOffers(HAND_CUPS_OFFERS, 'hand')).toEqual([]);
+  });
+
+  it('covers every major and every cup, both orientations, and both pauses', () => {
+    expect(HAND_MAJOR_OFFERS).toHaveLength(88);
+    expect(HAND_CUPS_OFFERS).toHaveLength(56);
+    expect(HAND_MAJOR_OFFERS.every((offer) => offer.sceneId === 'hand')).toBe(true);
+    expect(HAND_CUPS_OFFERS.every((offer) => offer.sceneId === 'hand')).toBe(true);
+    const majorKeys = HAND_MAJOR_OFFERS.map(
+      (offer) => `${offer.cardId}|${offer.orientation}|${offer.pauseIndex}`,
+    );
+    const cupKeys = HAND_CUPS_OFFERS.map(
+      (offer) => `${offer.cardId}|${offer.orientation}|${offer.pauseIndex}`,
+    );
+    expect([...majorKeys].sort()).toEqual([...coverKeys(MAJOR_IDS)].sort());
+    expect([...cupKeys].sort()).toEqual([...coverKeys(CUP_IDS)].sort());
+  });
+
+  it('keeps craft words off majors and cup number cards', () => {
+    const cupNumbers = HAND_CUPS_OFFERS.filter((offer) => CUP_NUMBER_IDS.has(offer.cardId));
+    expect(cupNumbers).toHaveLength(40);
+    for (const offer of [...HAND_MAJOR_OFFERS, ...cupNumbers]) {
+      const blob = offerBlob(offer);
+      for (const word of CRAFT_WORDS) {
+        expect(blob, `${offer.cardId} ${offer.orientation} pause ${offer.pauseIndex}`).not.toContain(
+          word,
+        );
+      }
+    }
+    const withCraft = HAND_CUPS_OFFERS.filter((offer) => offerBlob(offer).includes('哪一种手艺'));
+    expect(withCraft.length).toBeGreaterThan(0);
+    expect(withCraft.every((offer) => CUP_COURT_IDS.has(offer.cardId))).toBe(true);
+  });
+
+  it('forbids craft words on a hand major and allows them on a cup court', () => {
+    const major = HAND_MAJOR_OFFERS.find((offer) => offer.pauseIndex === 1);
+    const number = HAND_CUPS_OFFERS.find(
+      (offer) => offer.cardId === 'cups_01_ace' && offer.pauseIndex === 1,
+    );
+    const court = HAND_CUPS_OFFERS.find(
+      (offer) => offer.cardId === 'cups_page' && offer.orientation === 'upright' && offer.pauseIndex === 2,
+    );
+    if (!major || major.pauseIndex !== 1 || !number || number.pauseIndex !== 1 || !court) {
+      throw new Error('catalog missing hand samples');
+    }
+    const majorCraft: PauseOffer = {
+      ...major,
+      promptZh: `${major.promptZh.slice(0, -1)}，哪一种手艺？`,
+    };
+    const numberCraft: PauseOffer = {
+      ...number,
+      promptZh: `${number.promptZh.slice(0, -1)}，哪一种手艺？`,
+    };
+    const wrongLeave: PauseOffer = {
+      ...major,
+      actions: [
+        major.actions[0],
+        major.actions[1],
+        { ...major.actions[2], labelZh: '先把门带上' },
+      ],
+    };
+    expect(validateDoorOffers([majorCraft], 'hand').some((failure) => failure.includes('哪一种手艺'))).toBe(
+      true,
+    );
+    expect(validateDoorOffers([numberCraft], 'hand').some((failure) => failure.includes('哪一种手艺'))).toBe(
+      true,
+    );
+    expect(validateDoorOffers([court], 'hand')).toEqual([]);
+    expect(validateDoorOffers([wrongLeave], 'hand').some((failure) => failure.includes('放回桌上'))).toBe(
+      true,
+    );
+  });
+
+  it('does not require the full hand deck yet', () => {
+    expect(() => assertPauseCatalogComplete('hand')).toThrow();
   });
 });
 
