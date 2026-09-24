@@ -1,5 +1,6 @@
 import type { CardId } from '@/data/card-ids';
 import { SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
+import { HAND_SCENE_ENABLED, SCENE_PAUSE_ENABLED, type SceneId } from '@/lib/scene';
 import { cutDeck, drawTop, type Draw, type Orientation, type ShuffledCard } from '@/lib/shuffle';
 
 export type RitualStage =
@@ -36,6 +37,8 @@ type Base = {
   spreadId: SpreadId;
   reversals: boolean;
   abandonOpen: boolean;
+  sceneId: SceneId | null;
+  sceneLocked: boolean;
 };
 
 export type RitualSession =
@@ -75,6 +78,7 @@ export type RitualEvent =
   | { type: 'BACK' }
   | { type: 'SET_SPREAD'; spreadId: SpreadId }
   | { type: 'SET_REVERSALS'; reversals: boolean }
+  | { type: 'SET_SCENE'; sceneId: SceneId }
   | { type: 'CONFIRM_SPREAD' }
   | { type: 'HOLD_START'; operationId: string }
   | { type: 'HOLD_SAMPLE' }
@@ -111,6 +115,8 @@ export function createSession(): RitualSession {
     spreadId: 'three',
     reversals: true,
     abandonOpen: false,
+    sceneId: null,
+    sceneLocked: false,
   };
 }
 
@@ -127,7 +133,12 @@ function firstUnrevealed(state: Extract<RitualSession, { stage: 'reveal' }>): st
   return positions(state.spreadId).map((p) => p.id).find((id) => !state.revealed.includes(id)) ?? null;
 }
 
-export function reduce(state: RitualSession, event: RitualEvent): RitualSession {
+export function reduce(
+  state: RitualSession,
+  event: RitualEvent,
+  options: { scenePause?: boolean } = { scenePause: SCENE_PAUSE_ENABLED },
+): RitualSession {
+  const scenePause = options.scenePause === true;
   if (event.type === 'ABANDON_REQUEST' && state.stage !== 'close' && state.stage !== 'enter') {
     return { ...state, abandonOpen: true };
   }
@@ -151,7 +162,15 @@ export function reduce(state: RitualSession, event: RitualEvent): RitualSession 
       if (event.type === 'SET_SPREAD') return { ...state, spreadId: event.spreadId };
       if (event.type === 'SET_REVERSALS') return { ...state, reversals: event.reversals };
       if (event.type === 'BACK') return { ...state, stage: 'question' };
+      if (event.type === 'SET_SCENE') {
+        if (!scenePause || state.sceneLocked || (event.sceneId === 'hand' && !HAND_SCENE_ENABLED)) return state;
+        return { ...state, sceneId: event.sceneId };
+      }
       if (event.type === 'CONFIRM_SPREAD') {
+        if (scenePause && state.spreadId === 'three') {
+          if (state.sceneId === null) return state;
+          return { ...state, stage: 'shuffle', shufflePhase: 'idle', operationId: null, sceneLocked: true };
+        }
         return { ...state, stage: 'shuffle', shufflePhase: 'idle', operationId: null };
       }
       return state;
@@ -198,6 +217,8 @@ export function reduce(state: RitualSession, event: RitualEvent): RitualSession 
           spreadId: state.spreadId,
           reversals: state.reversals,
           abandonOpen: false,
+          sceneId: state.sceneId,
+          sceneLocked: state.sceneLocked,
           receipt,
         };
       }
@@ -243,6 +264,8 @@ function reduceShuffle(
       spreadId: state.spreadId,
       reversals: state.reversals,
       abandonOpen: false,
+      sceneId: state.sceneId,
+      sceneLocked: state.sceneLocked,
       operationId: null,
       deckPreCut: event.deckPreCut,
       commitFull: event.commitFull,
@@ -289,6 +312,8 @@ function reduceCut(
       spreadId: state.spreadId,
       reversals: state.reversals,
       abandonOpen: false,
+      sceneId: state.sceneId,
+      sceneLocked: state.sceneLocked,
       deckPreCut: state.deckPreCut,
       commitFull: state.commitFull,
       commitShort: state.commitShort,
