@@ -28,7 +28,6 @@ function pause1(
   return { sceneId: 'door', cardId, orientation, pauseIndex: 1, promptZh, actions };
 }
 
-// The picture question stays fixed. Only the required prefix changes, so pause 2 cannot grow a second action set.
 function pause2(
   cardId: CardId,
   orientation: Orientation,
@@ -290,41 +289,41 @@ export const DOOR_MAJOR_OFFERS: readonly PauseOffer[] = [
   pause1(
     '06_the_lovers',
     'upright',
-    '门缝里站着两个人，脚前分成两条路。你要怎么走这道还没选定的岔？',
+    '门缝里站着两个人，头上是天使，身后各有一棵树。你要怎么对待这两个人？',
     steps(
-      action('road', 'engage', '先走上其中一条路', '我先走上其中一条路。'),
-      action('side', 'engage', '把身体放到选定的一边', '我把身体放到选定的那一边，另一条留在路口。'),
-      '我先把门带上，岔开的两条路留在门外。',
+      action('people', 'engage', '先走到其中一个人旁边', '我先走到天使底下的其中一个人旁边。'),
+      action('trees', 'engage', '先看他们身后的两棵树', '我先看他们身后的两棵树，一棵结果，一棵生着火焰。'),
+      '我先把门带上，这两个人和天使留在门外。',
     ),
   ),
   pause2(
     '06_the_lovers',
     'upright',
-    '门缝里的两条路还分着，那两个人还站在路口。你要怎么对待这个还站着的路口？',
+    '门缝里那两个人还站着，天使和两棵树都还在。你要怎么靠近他们？',
     steps(
-      action('foot', 'engage', '把脚放到其中一条路上', '我把脚放到其中一条路上。'),
-      action('look', 'engage', '先看清两条路各自通向哪', '我先看清两条路各自通向哪。'),
-      '我先把门带上，还没选定的路口留在门外。',
+      action('fruit', 'engage', '站到结着果的树前', '我站到结着果的那棵树前。'),
+      action('flame', 'engage', '站到生着火焰的树前', '我站到生着火焰的那棵树前。'),
+      '我先把门带上，两棵树和天使留在门外。',
     ),
   ),
   pause1(
     '06_the_lovers',
     'reversed',
-    '门缝里两条路都亮着，两个人的脚停在中间。你要怎么对待这双还没落地的脚？',
+    '门缝里两个人都还站着，谁也没靠近身后的树，天使仍在头上。你要怎么对待这两个还停着的人？',
     steps(
-      action('off', 'engage', '先把一只脚从一条路上拿开', '我先把一只脚从其中一条路上拿开。'),
-      action('one', 'engage', '只留一条还亮的路', '我只留一条还亮的路在门口。'),
-      '我先把门带上，停在中间的两条路留在门外。',
+      action('near', 'engage', '先走向其中一棵树', '我先走向他们身后的其中一棵树。'),
+      action('wait', 'engage', '让两个人仍停在天使下', '我让这两个人仍停在天使下面。'),
+      '我先把门带上，还没靠近树的两个人留在门外。',
     ),
   ),
   pause2(
     '06_the_lovers',
     'reversed',
-    '那两个人仍站在门缝里的两条路中间。你要怎么对待还停在中间的这双脚？',
+    '那两个人仍一起站在门缝里，两棵树都在身后。你要怎么对待还停着的他们？',
     steps(
-      action('land', 'engage', '让脚落到其中一条路上', '我让脚落到其中一条路上。'),
-      action('say', 'engage', '先在路口说出站哪一边', '我先在路口说出自己站的那一边。'),
-      '我先把门带上，停在中间的人留在门外。',
+      action('one', 'engage', '请一个人靠近一棵树', '我请其中一个人先靠近身后的一棵树。'),
+      action('angel', 'engage', '抬头看还在上面的天使', '我抬头看还停在他们头上的天使。'),
+      '我先把门带上，还停着的两个人留在门外。',
     ),
   ),
   pause1(
@@ -530,7 +529,7 @@ export const DOOR_MAJOR_OFFERS: readonly PauseOffer[] = [
   pause1(
     '12_the_hanged_man',
     'upright',
-    '门缝里，一个人倒吊着，一只脚踝系在门框上。你要怎么对待这个倒过来的人？',
+    '门缝里，一个人被绳子倒吊在树上。你要怎么对待这个倒过来的人？',
     steps(
       action('stay', 'engage', '让他再倒吊一会儿', '我让他再倒吊一会儿。'),
       action('view', 'engage', '从他倒看的方向看一次', '我从他倒看的方向看一次门里。'),
@@ -552,7 +551,7 @@ export const DOOR_MAJOR_OFFERS: readonly PauseOffer[] = [
     'reversed',
     '门缝里，绳子还系着，倒吊的人停在空等里。你要怎么对待这根还没解开的绳？',
     steps(
-      action('down', 'engage', '让他从门框回到地面', '我让倒吊的人从门框回到地面。'),
+      action('down', 'engage', '让他从树上回到地面', '我让倒吊的人从树上回到地面。'),
       action('loose', 'engage', '先不把绳子再系紧', '我先不把这根绳子再系紧。'),
       '我先把门带上，空等的绳子留在门外。',
     ),
@@ -560,11 +559,11 @@ export const DOOR_MAJOR_OFFERS: readonly PauseOffer[] = [
   pause2(
     '12_the_hanged_man',
     'reversed',
-    '门缝里的人仍被钉在倒吊的位置。你要怎么松开这根绳？',
+    '那个人仍被一根绳子倒吊在树上。你要怎么对待这个还吊着的人？',
     steps(
-      action('knot', 'engage', '解开系在脚踝上的结', '我解开系在脚踝上的那个结。'),
-      action('ground', 'engage', '把决定放回地面', '我把已经知道的那个决定放回地面，不再用倒吊推迟它。'),
-      '我先把门带上，仍被钉住的人留在门外。',
+      action('knot', 'engage', '解开系在树上的绳结', '我解开把他脚踝系在树上的那个绳结。'),
+      action('ground', 'engage', '让他仍用绳子吊着', '我让他还用这根绳子在树上停一会儿。'),
+      '我先把门带上，还系在树上的人留在门外。',
     ),
   ),
   pause1(
@@ -830,21 +829,21 @@ export const DOOR_MAJOR_OFFERS: readonly PauseOffer[] = [
   pause1(
     '19_the_sun',
     'reversed',
-    '门缝里，太阳还在，一层窗帘拉着，向日葵晒不进屋里。你要怎么对待这层拉上的窗帘？',
+    '门缝里，孩子还骑在白马上，向日葵隔在矮墙后面。你要怎么对待墙后的这些花？',
     steps(
-      action('curtain', 'engage', '把窗帘拉开一条缝', '我把窗帘拉开一条缝。'),
-      action('return', 'engage', '让孩子回到能晒到的地方', '我让那个孩子回到能被晒到的地方。'),
-      '我先把门带上，拉着的窗帘留在门外。',
+      action('child', 'engage', '让孩子面对墙后的花', '我让那个孩子从白马上转向矮墙后的向日葵。'),
+      action('flower', 'engage', '先沿矮墙看向日葵', '我先沿着矮墙看墙后的那排向日葵。'),
+      '我先把门带上，墙后的向日葵留在门外。',
     ),
   ),
   pause2(
     '19_the_sun',
     'reversed',
-    '门缝里的窗帘仍拉着，孩子站在光的边上。你要怎么让光进到门内？',
+    '白马仍停在门缝里的矮墙前，向日葵还在墙后。你要怎么对待这堵墙和墙后的花？',
     steps(
-      action('wider', 'engage', '再把窗帘拉开一截', '我再把窗帘拉开一截。'),
-      action('self', 'engage', '把自己也算进这片光', '我把自己也算进这片光里。'),
-      '我先把门带上，还拉着的窗帘留在门外。',
+      action('horse', 'engage', '让白马停在矮墙前', '我让白马先停在矮墙前，孩子还在马上。'),
+      action('look', 'engage', '看墙后朝向太阳的花', '我看矮墙后仍朝向太阳的那排向日葵。'),
+      '我先把门带上，矮墙和向日葵留在门外。',
     ),
   ),
   pause1(
@@ -870,21 +869,21 @@ export const DOOR_MAJOR_OFFERS: readonly PauseOffer[] = [
   pause1(
     '20_judgement',
     'reversed',
-    '门缝里，号角还在响，有人捂着耳朵，棺中的人没有起来。你要怎么对待这声被捂住的号角？',
+    '门缝里，号角还对着棺，棺里的手臂没有抬起来。你要怎么对待这些还没抬起的手臂？',
     steps(
-      action('uncover', 'engage', '先把手从耳朵上拿开', '我先把手从耳朵上拿开。'),
-      action('rise', 'engage', '让棺中的人先坐起来', '我让棺中的人先坐起来，不把号角听成责罚。'),
-      '我先把门带上，捂着耳朵的人留在门外。',
+      action('horn', 'engage', '先听对着棺的号角', '我先听这声对着棺的号角。'),
+      action('arms', 'engage', '看棺里还垂着的手臂', '我看棺里还垂着的那些手臂。'),
+      '我先把门带上，没抬起的手臂留在门外。',
     ),
   ),
   pause2(
     '20_judgement',
     'reversed',
-    '门缝里的手仍捂着耳，棺中的人还没起来。你要怎么放开这只耳朵？',
+    '号角仍响在门缝里，棺中的人还没有举起手臂。你要怎么对待这些还在棺里的人？',
     steps(
-      action('down', 'engage', '把捂耳的手放下', '我把捂着耳朵的手放下。'),
-      action('call', 'engage', '把号角听成一句具体的呼唤', '我把这声号角听成一句具体的呼唤，而不是整个人被否定。'),
-      '我先把门带上，没起来的人留在门外。',
+      action('lift', 'engage', '让其中一只手臂先抬起', '我让其中一只还垂着的手臂先抬起来。'),
+      action('edge', 'engage', '在棺沿边听号角', '我在棺沿边停下来，听这声号角。'),
+      '我先把门带上，还在棺里的人留在门外。',
     ),
   ),
   pause1(
