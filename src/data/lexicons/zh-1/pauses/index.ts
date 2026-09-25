@@ -7,6 +7,11 @@ import { DOOR_PENTS_OFFERS } from './door-pents';
 import { DOOR_SWORDS_OFFERS } from './door-swords';
 import { DOOR_WANDS_OFFERS } from './door-wands';
 import { PAUSE_EXAMPLES } from './examples';
+import { HAND_CUPS_OFFERS } from './hand-cups';
+import { HAND_MAJOR_OFFERS } from './hand-majors';
+import { HAND_PENTS_OFFERS } from './hand-pents';
+import { HAND_SWORDS_OFFERS } from './hand-swords';
+import { HAND_WANDS_OFFERS } from './hand-wands';
 import type { PauseOffer } from './types';
 
 const DOOR_OFFERS: readonly PauseOffer[] = [
@@ -17,15 +22,27 @@ const DOOR_OFFERS: readonly PauseOffer[] = [
   ...DOOR_WANDS_OFFERS,
 ];
 
+const HAND_OFFERS: readonly PauseOffer[] = [
+  ...HAND_MAJOR_OFFERS,
+  ...HAND_CUPS_OFFERS,
+  ...HAND_PENTS_OFFERS,
+  ...HAND_SWORDS_OFFERS,
+  ...HAND_WANDS_OFFERS,
+];
+
+function offersFor(sceneId: 'door' | 'hand'): readonly PauseOffer[] {
+  return sceneId === 'door' ? DOOR_OFFERS : HAND_OFFERS;
+}
+
 export function lookupPauseOffer(
   sceneId: SceneId | null,
   cardId: string,
   orientation: Orientation,
   pauseIndex: 1 | 2,
 ): PauseOffer | null {
-  if (sceneId !== 'door') return null;
+  if (sceneId !== 'door' && sceneId !== 'hand') return null;
   return (
-    DOOR_OFFERS.find(
+    offersFor(sceneId).find(
       (offer) =>
         offer.cardId === cardId &&
         offer.orientation === orientation &&
@@ -65,33 +82,32 @@ function samePauseOffer(left: PauseOffer, right: PauseOffer): boolean {
 }
 
 export function assertPauseCatalogComplete(sceneId: 'door' | 'hand'): void {
-  if (sceneId !== 'door') {
-    throw new Error('hand catalog is not part of this check');
-  }
-  if (DOOR_OFFERS.length !== CARD_IDS.length * 4) {
-    throw new Error(`expected ${CARD_IDS.length * 4} door offers, got ${DOOR_OFFERS.length}`);
+  const offers = offersFor(sceneId);
+  const expected = CARD_IDS.length * 4;
+  if (offers.length !== expected) {
+    throw new Error(`expected ${expected} ${sceneId} offers, got ${offers.length}`);
   }
   const seen = new Set<string>();
-  for (const offer of DOOR_OFFERS) {
-    if (offer.sceneId !== 'door') throw new Error(`non-door offer ${offer.cardId}`);
+  for (const offer of offers) {
+    if (offer.sceneId !== sceneId) throw new Error(`non-${sceneId} offer ${offer.cardId}`);
     const key = `${offer.cardId}|${offer.orientation}|${offer.pauseIndex}`;
-    if (seen.has(key)) throw new Error(`duplicate door offer ${key}`);
+    if (seen.has(key)) throw new Error(`duplicate ${sceneId} offer ${key}`);
     seen.add(key);
   }
   for (const cardId of CARD_IDS) {
     for (const orientation of ['upright', 'reversed'] as const) {
       for (const pauseIndex of [1, 2] as const) {
         const key = `${cardId}|${orientation}|${pauseIndex}`;
-        if (!seen.has(key)) throw new Error(`missing door offer ${key}`);
+        if (!seen.has(key)) throw new Error(`missing ${sceneId} offer ${key}`);
       }
     }
   }
   for (const example of PAUSE_EXAMPLES) {
-    if (example.sceneId !== 'door') continue;
-    const found = lookupPauseOffer('door', example.cardId, example.orientation, example.pauseIndex);
+    if (example.sceneId !== sceneId) continue;
+    const found = lookupPauseOffer(sceneId, example.cardId, example.orientation, example.pauseIndex);
     if (!found || !samePauseOffer(found, example)) {
       throw new Error(
-        `door example ${example.cardId} ${example.orientation} pause ${example.pauseIndex} is not in the catalog`,
+        `${sceneId} example ${example.cardId} ${example.orientation} pause ${example.pauseIndex} is not in the catalog`,
       );
     }
   }

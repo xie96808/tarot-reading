@@ -9,6 +9,9 @@ import { DOOR_SWORDS_OFFERS } from '../pauses/door-swords';
 import { DOOR_WANDS_OFFERS } from '../pauses/door-wands';
 import { HAND_CUPS_OFFERS } from '../pauses/hand-cups';
 import { HAND_MAJOR_OFFERS } from '../pauses/hand-majors';
+import { HAND_PENTS_OFFERS } from '../pauses/hand-pents';
+import { HAND_SWORDS_OFFERS } from '../pauses/hand-swords';
+import { HAND_WANDS_OFFERS } from '../pauses/hand-wands';
 import { lookupPauseOffer } from '../pauses/examples';
 import type { PauseOffer } from '../pauses/types';
 import { validateDoorOffers } from '../pauses/validate';
@@ -281,9 +284,83 @@ describe('hand majors and cups pause catalog', () => {
       true,
     );
   });
+});
 
-  it('does not require the full hand deck yet', () => {
-    expect(() => assertPauseCatalogComplete('hand')).toThrow();
+const NUMBER_RANKS = ['01_ace', '02', '03', '04', '05', '06', '07', '08', '09', '10'] as const;
+const HAND_NUMBER_IDS = new Set(
+  (['pents', 'swords', 'wands'] as const).flatMap((suit) => NUMBER_RANKS.map((rank) => `${suit}_${rank}`)),
+);
+const HAND_COURT_IDS = new Set(
+  (['pents', 'swords', 'wands'] as const).flatMap((suit) =>
+    (['page', 'knight', 'queen', 'king'] as const).map((rank) => `${suit}_${rank}`),
+  ),
+);
+const HAND_SUIT_OFFERS = [...HAND_PENTS_OFFERS, ...HAND_SWORDS_OFFERS, ...HAND_WANDS_OFFERS];
+
+describe('hand pents, swords, and wands pause catalog', () => {
+  it('returns no skeleton failures', () => {
+    expect(validateDoorOffers(HAND_PENTS_OFFERS, 'hand')).toEqual([]);
+    expect(validateDoorOffers(HAND_SWORDS_OFFERS, 'hand')).toEqual([]);
+    expect(validateDoorOffers(HAND_WANDS_OFFERS, 'hand')).toEqual([]);
+  });
+
+  it('covers every pent, sword, and wand, both orientations, and both pauses', () => {
+    expect(HAND_PENTS_OFFERS).toHaveLength(56);
+    expect(HAND_SWORDS_OFFERS).toHaveLength(56);
+    expect(HAND_WANDS_OFFERS).toHaveLength(56);
+    expect(HAND_SUIT_OFFERS.every((offer) => offer.sceneId === 'hand')).toBe(true);
+    const pentKeys = HAND_PENTS_OFFERS.map(
+      (offer) => `${offer.cardId}|${offer.orientation}|${offer.pauseIndex}`,
+    );
+    const swordKeys = HAND_SWORDS_OFFERS.map(
+      (offer) => `${offer.cardId}|${offer.orientation}|${offer.pauseIndex}`,
+    );
+    const wandKeys = HAND_WANDS_OFFERS.map(
+      (offer) => `${offer.cardId}|${offer.orientation}|${offer.pauseIndex}`,
+    );
+    expect([...pentKeys].sort()).toEqual([...coverKeys(PENT_IDS)].sort());
+    expect([...swordKeys].sort()).toEqual([...coverKeys(SWORD_IDS)].sort());
+    expect([...wandKeys].sort()).toEqual([...coverKeys(WAND_IDS)].sort());
+  });
+
+  it('deep-equals the locked hand examples', () => {
+    const locked = [
+      ['pents_01_ace', 'upright', 1, HAND_PENTS_OFFERS],
+      ['pents_page', 'upright', 2, HAND_PENTS_OFFERS],
+    ] as const;
+    for (const [cardId, orientation, pauseIndex, catalog] of locked) {
+      const offer = catalog.find(
+        (item) =>
+          item.cardId === cardId &&
+          item.orientation === orientation &&
+          item.pauseIndex === pauseIndex,
+      );
+      const example = lookupPauseOffer('hand', cardId, orientation, pauseIndex);
+      expect(offer).toEqual(example);
+      expect(offer).toBe(example);
+    }
+  });
+
+  it('keeps craft substrings off number cards', () => {
+    const numbers = HAND_SUIT_OFFERS.filter((offer) => HAND_NUMBER_IDS.has(offer.cardId));
+    expect(numbers).toHaveLength(120);
+    for (const offer of numbers) {
+      const blob = offerBlob(offer);
+      for (const word of CRAFT_WORDS) {
+        expect(blob, `${offer.cardId} ${offer.orientation} pause ${offer.pauseIndex}`).not.toContain(
+          word,
+        );
+      }
+    }
+    const withCraft = HAND_SUIT_OFFERS.filter((offer) => offerBlob(offer).includes('哪一种手艺'));
+    expect(withCraft.length).toBeGreaterThan(0);
+    expect(withCraft.every((offer) => HAND_COURT_IDS.has(offer.cardId))).toBe(true);
+  });
+});
+
+describe('complete hand pause catalog', () => {
+  it('requires every card, both orientations, and both pauses', () => {
+    expect(() => assertPauseCatalogComplete('hand')).not.toThrow();
   });
 });
 
