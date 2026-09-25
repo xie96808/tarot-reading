@@ -219,7 +219,7 @@ describe('pause gates', () => {
   });
 
   it('writes missing instead of skip when the card has no offer', () => {
-    const state = lockedThree(threeDraws({ cardId: 'swords_01_ace' }, { cardId: 'cups_02' }));
+    const state = lockedThree(threeDraws({ cardId: 'not_in_door_catalog' as CardId }, { cardId: 'cups_02' }));
     const past = reduce(state, { type: 'REVEAL_NEXT' }, sceneOn);
     expect(past.stage).toBe('reveal');
     if (past.stage !== 'reveal') return;

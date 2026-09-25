@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { MAJOR_IDS, MINOR_IDS } from '@/data/card-ids';
 import { CARDS } from '@/data/lexicons/zh-1';
+import { assertPauseCatalogComplete } from '../pauses';
 import { DOOR_CUPS_OFFERS } from '../pauses/door-cups';
 import { DOOR_MAJOR_OFFERS } from '../pauses/door-majors';
 import { DOOR_PENTS_OFFERS } from '../pauses/door-pents';
+import { DOOR_SWORDS_OFFERS } from '../pauses/door-swords';
+import { DOOR_WANDS_OFFERS } from '../pauses/door-wands';
 import { lookupPauseOffer } from '../pauses/examples';
 import type { PauseOffer } from '../pauses/types';
 import { validateDoorOffers } from '../pauses/validate';
 
 const CUP_IDS = MINOR_IDS.filter((id) => id.startsWith('cups_'));
 const PENT_IDS = MINOR_IDS.filter((id) => id.startsWith('pents_'));
+const SWORD_IDS = MINOR_IDS.filter((id) => id.startsWith('swords_'));
+const WAND_IDS = MINOR_IDS.filter((id) => id.startsWith('wands_'));
 const CUP_NUMBER_IDS = new Set(
   (['01_ace', '02', '03', '04', '05', '06', '07', '08', '09', '10'] as const).map((rank) => `cups_${rank}`),
 );
@@ -172,5 +177,33 @@ describe('door cups and pents pause catalog', () => {
         expect(blob, `${offer.cardId} ${offer.orientation} pause ${offer.pauseIndex}`).not.toContain(word);
       }
     }
+  });
+});
+
+describe('door swords and wands pause catalog', () => {
+  it('returns no skeleton failures', () => {
+    expect(validateDoorOffers(DOOR_SWORDS_OFFERS)).toEqual([]);
+    expect(validateDoorOffers(DOOR_WANDS_OFFERS)).toEqual([]);
+  });
+
+  it('covers every sword and every wand, both orientations, and both pauses', () => {
+    expect(DOOR_SWORDS_OFFERS).toHaveLength(56);
+    expect(DOOR_WANDS_OFFERS).toHaveLength(56);
+    expect(DOOR_SWORDS_OFFERS.every((offer) => offer.sceneId === 'door')).toBe(true);
+    expect(DOOR_WANDS_OFFERS.every((offer) => offer.sceneId === 'door')).toBe(true);
+    const swordKeys = DOOR_SWORDS_OFFERS.map(
+      (offer) => `${offer.cardId}|${offer.orientation}|${offer.pauseIndex}`,
+    );
+    const wandKeys = DOOR_WANDS_OFFERS.map(
+      (offer) => `${offer.cardId}|${offer.orientation}|${offer.pauseIndex}`,
+    );
+    expect([...swordKeys].sort()).toEqual([...coverKeys(SWORD_IDS)].sort());
+    expect([...wandKeys].sort()).toEqual([...coverKeys(WAND_IDS)].sort());
+  });
+});
+
+describe('complete door pause catalog', () => {
+  it('requires every card, both orientations, and both pauses', () => {
+    expect(() => assertPauseCatalogComplete('door')).not.toThrow();
   });
 });
