@@ -27,8 +27,9 @@ test('three-card ritual reaches a readable result', async ({ page }) => {
   await page.getByRole('button', { name: '这次不设问题' }).click();
   const hand = page.getByRole('button', { name: '过手' });
   await expect(hand).toBeVisible();
-  await expect(hand).toBeDisabled();
-  await expect(hand).toContainText('过手还在准备。选择仍留在这里，这一局先不能点。');
+  await expect(hand).toBeEnabled();
+  await expect(hand).toContainText('牌面落到掌心再放下。过去和现在各停一次。');
+  await expect(hand).not.toContainText('过手还在准备');
   await expect(page.getByRole('button', { name: '开始洗牌' })).toBeDisabled();
   await page.getByRole('button', { name: '推门' }).click();
   await page.getByRole('button', { name: '开始洗牌' }).click();
@@ -49,4 +50,17 @@ test('three-card ritual reaches a readable result', async ({ page }) => {
   await expect(page.getByRole('button', { name: '书页阅读' })).toBeVisible();
   await page.getByRole('button', { name: '书页阅读' }).click();
   await expect(page.getByRole('heading', { name: '整阵线索' })).toBeVisible();
+});
+
+test('three-card ritual can start a shuffle after choosing 过手', async ({ page }) => {
+  await page.goto('/read');
+  await page.getByRole('button', { name: '我准备好了' }).click();
+  await page.getByRole('button', { name: '这次不设问题' }).click();
+  const hand = page.getByRole('button', { name: '过手' });
+  await expect(hand).toBeEnabled();
+  await expect(hand).toContainText('牌面落到掌心再放下。过去和现在各停一次。');
+  await hand.click();
+  await expect(page.getByRole('button', { name: '开始洗牌' })).toBeEnabled();
+  await page.getByRole('button', { name: '开始洗牌' }).click();
+  await expect(page.getByRole('button', { name: '为我洗牌' })).toBeVisible();
 });

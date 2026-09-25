@@ -23,8 +23,7 @@ describe('scene lock', () => {
     clearSession();
   });
 
-  it('accepts door on a three-card spread and ignores hand while that scene is disabled', () => {
-    expect(HAND_SCENE_ENABLED).toBe(false);
+  it('accepts door on a three-card spread before the shuffle starts', () => {
     const early = createSession();
     expect(reduce(early, { type: 'SET_SCENE', sceneId: 'door' }, sceneOn)).toBe(early);
     const state = toSpread();
@@ -32,11 +31,27 @@ describe('scene lock', () => {
     expect(state.spreadId).toBe('three');
     expect(state.sceneId).toBeNull();
     expect(state.sceneLocked).toBe(false);
-    expect(reduce(state, { type: 'SET_SCENE', sceneId: 'hand' }, sceneOn)).toBe(state);
     const door = reduce(state, { type: 'SET_SCENE', sceneId: 'door' }, sceneOn);
     expect(door.sceneId).toBe('door');
     expect(door.sceneLocked).toBe(false);
     expect(door.stage).toBe('spread');
+  });
+
+  it('accepts hand while that scene is enabled and ignores a later switch back to door', () => {
+    expect(HAND_SCENE_ENABLED).toBe(true);
+    const state = toSpread();
+    const hand = reduce(state, { type: 'SET_SCENE', sceneId: 'hand' }, sceneOn);
+    expect(hand.sceneId).toBe('hand');
+    expect(hand.sceneLocked).toBe(false);
+    expect(hand.stage).toBe('spread');
+    const locked = reduce(hand, { type: 'CONFIRM_SPREAD' }, sceneOn);
+    expect(locked.stage).toBe('shuffle');
+    expect(locked.sceneId).toBe('hand');
+    expect(locked.sceneLocked).toBe(true);
+    expect(reduce(locked, { type: 'SET_SCENE', sceneId: 'door' }, sceneOn)).toBe(locked);
+    const back = reduce(locked, { type: 'BACK' }, sceneOn);
+    expect(back.stage).toBe('spread');
+    expect(reduce(back, { type: 'SET_SCENE', sceneId: 'door' }, sceneOn)).toBe(back);
   });
 
   it('does not leave a three-card spread until a scene is chosen', () => {
