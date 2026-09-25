@@ -1,4 +1,10 @@
-import { ICP_NUMBER, MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS, SITE_NAME } from '@/config/site';
+import {
+  ICP_NUMBER,
+  MAX_NOTE_CODEPOINTS,
+  MAX_PAUSE_LINE_CODEPOINTS,
+  MAX_QUESTION_CODEPOINTS,
+  SITE_NAME,
+} from '@/config/site';
 
 export const COPY = {
   siteName: SITE_NAME,
@@ -83,4 +89,31 @@ export const COPY = {
   sealedFingerprint: '查看封存',
   crisisResources:
     '若你正处于即时危险，请先联系当地紧急援助，而不是用抽牌做决定。求助资源见方法页。',
+  scenePickerTitle: '这一局，你要怎样进到牌里？',
+  scenePickerBody:
+    '推门或过手只决定房间怎么动。门口或手里出现什么，仍由抽到的牌决定。按下开始洗牌之后，这个选择就锁住；只有放弃本局才会清掉。',
+  sceneDoor: '推门',
+  sceneDoorHint: '从牌背的门缝看见牌面。过去和现在各停一次。',
+  sceneHand: '过手',
+  sceneHandPending: '过手还在准备。选择仍留在这里，这一局先不能点。',
+  sceneHandHint: '牌面落到掌心再放下。过去和现在各停一次。',
+  sceneRequired: '先选定推门或过手。',
+  sceneLocked: (scene: '推门' | '过手') =>
+    `场景已锁住：${scene}。可以改牌阵或逆位，不能改这一选择。要换场景，只能放弃本局。`,
+  pauseDoorLead: '门缝里先只露出大半张。点一步，或先不点。',
+  pauseHandLead: '先落到掌心。点一步，或先不点。',
+  pauseSkip: '先不选，看这张牌',
+  pauseCustomTitle: '也可以改成自己的话。',
+  pauseCustomPlaceholder: '一句就够，也可以空着。',
+  pauseCustomConfirm: '就用这句',
+  pauseCustomBack: '返回这几个选择',
+  pauseCount: (n: number) => `已写 ${n} / ${MAX_PAUSE_LINE_CODEPOINTS} 字`,
+  pauseMeaningLead: '下面是词库里的原文，不因你刚才点的那一步改写。',
+  pauseMissing: '这一停没有写好的步骤。',
+  pausePrivacy: '你改的这句话和留下的那一句只留在这台浏览器。分享链接不带上它们。',
+  sceneStepsTitle: '你点过的两步',
+  keepAsk: '这两句里，留下哪一句给你自己？未来不是选项。',
+  keepOnly: '留下的是这一句。未来不是选项。',
+  keepRequired: '先选定要留下的那一句。',
+  noteBeside: '写在这句旁边（可不写）',
 } as const;

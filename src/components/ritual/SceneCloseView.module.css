@@ -1,0 +1,73 @@
+.panel {
+  width: 100%;
+  max-width: 36rem;
+  margin: var(--space-4) auto 0;
+  padding: var(--space-4);
+  background: var(--parchment);
+  color: var(--ink);
+  text-align: left;
+  font-family: var(--font-body);
+}
+
+.title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.sentences {
+  margin: 0 0 var(--space-3);
+  padding-left: 1.25rem;
+}
+
+.sentences li {
+  margin-bottom: var(--space-2);
+}
+
+.ask,
+.static {
+  margin: 0 0 var(--space-3);
+  color: var(--ash);
+  font-family: var(--font-body);
+}
+
+.choices {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.choices label {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  min-height: var(--button-h);
+  color: var(--ink);
+}
+
+.fade {
+  animation: closeFade var(--read-fade-ms, 420ms) ease both;
+}
+
+@keyframes closeFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 1023px) {
+  .panel {
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade {
+    animation: none;
+  }
+}

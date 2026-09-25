@@ -1,24 +1,12 @@
 import { isCardId } from '@/data/card-ids';
 import { CARDS } from '@/data/lexicons/zh-1';
 import { encodeReading } from '@/lib/reading-codec';
+import { toSharePayload } from '@/lib/share-payload';
 import type { HistoryEntry } from '@/lib/storage';
 import type { Draw } from '@/lib/shuffle';
 
 export function buildHistoryHref(entry: HistoryEntry, options: { includeQuestion: boolean }): string {
-  const q = options.includeQuestion ? entry.question?.trim() || null : null;
-  const id = encodeReading({
-    v: 1,
-    deckVersion: 'rws-1',
-    lexiconVersion: 'zh-1',
-    algo: 'fy-hkdf-2',
-    spreadId: entry.receipt.spreadId,
-    q,
-    reversals: entry.receipt.reversals,
-    cutIndex: entry.receipt.cutIndex,
-    commit: entry.receipt.commitShort,
-    draws: entry.receipt.draws,
-    ts: Math.floor(entry.receipt.completedAt / 1000),
-  });
+  const id = encodeReading(toSharePayload(entry.receipt, options.includeQuestion));
   return `/r/${id}`;
 }
 

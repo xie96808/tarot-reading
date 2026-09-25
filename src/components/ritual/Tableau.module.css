@@ -93,6 +93,16 @@
   z-index: 3;
 }
 
+.mobileColumn {
+  width: 100%;
+}
+
+.desktopPause {
+  width: 100%;
+  max-width: 36rem;
+  margin: var(--space-4) auto 0;
+}
+
 .step {
   display: none;
   max-width: 170px;

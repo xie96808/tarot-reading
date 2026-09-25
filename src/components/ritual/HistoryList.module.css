@@ -17,6 +17,14 @@
   min-height: 44px;
 }
 
+.kept {
+  margin: 16px 0;
+  padding: 12px;
+  background: var(--parchment);
+  color: var(--ink);
+  text-align: left;
+}
+
 .wrap button {
   background: transparent;
   color: var(--ash);

@@ -1,0 +1,93 @@
+.sheet {
+  width: 100%;
+  max-width: 36rem;
+  margin: var(--space-4) auto 0;
+  padding: var(--space-4);
+  background: var(--parchment);
+  color: var(--ink);
+  text-align: left;
+}
+
+.prompt {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.lead,
+.body,
+.privacy {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.privacy {
+  color: var(--ash);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.sheet button {
+  min-height: var(--button-h);
+  padding: 0 var(--space-3);
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ash);
+  font-family: var(--font-body);
+  text-transform: none;
+}
+
+.leave {
+  color: var(--ash);
+  border: none;
+  background: transparent;
+}
+
+.line {
+  display: block;
+  width: 100%;
+  height: var(--button-h);
+  min-height: var(--button-h);
+  margin-bottom: var(--space-3);
+  padding: 0 var(--space-3);
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ash);
+  font-family: var(--font-body);
+}
+
+.fade {
+  animation: pauseFade var(--read-fade-ms, 420ms) ease both;
+}
+
+@keyframes pauseFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 1023px) {
+  .sheet {
+    max-width: none;
+  }
+
+  .actions {
+    gap: var(--space-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade {
+    animation: none;
+  }
+}
