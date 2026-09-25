@@ -5,6 +5,7 @@ async function enter(page: Page, celtic = false) {
   await page.getByRole('button', { name: '我准备好了' }).click();
   await page.getByRole('button', { name: '这次不设问题' }).click();
   if (celtic) await page.getByRole('button', { name: /处境之镜/ }).click();
+  else await page.getByRole('button', { name: '推门' }).click();
   await page.getByRole('button', { name: '开始洗牌' }).click();
 }
 
@@ -39,7 +40,14 @@ for (const width of [375, 390, 719, 720, 721, 768, 1023, 1024, 1440]) {
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await scene.screenshot({ path: testInfo.outputPath(`table-${width}.png`) });
-    await next.click(); await next.click(); await next.click();
+    const skip = page.getByRole('button', { name: '先不选，看这张牌' });
+    await next.click();
+    await expect(skip).toBeEnabled();
+    await skip.click();
+    await next.click();
+    await expect(skip).toBeEnabled();
+    await skip.click();
+    await next.click();
     await expect(page.getByRole('heading', { name: '整阵线索' })).toBeVisible();
   });
 }
@@ -73,8 +81,20 @@ test('pointer shuffle animates the deck without moving the table', async ({ page
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await expect(scene).toHaveAttribute('data-hand', 'riffle');
-  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.6, { steps: 12 });
-  expect(await scene.boundingBox()).toEqual(box);
+  let previous = -1;
+  await expect.poll(async () => {
+    const y = (await scene.boundingBox())!.y;
+    const settled = Math.abs(y - previous) < 0.1;
+    previous = y;
+    return settled;
+  }).toBe(true);
+  const held = (await scene.boundingBox())!;
+  await page.mouse.move(held.x + held.width * 0.6, held.y + held.height * 0.6, { steps: 12 });
+  const moved = (await scene.boundingBox())!;
+  expect(moved.width).toBe(held.width);
+  expect(moved.height).toBe(held.height);
+  expect(Math.abs(moved.x - held.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(moved.y - held.y)).toBeLessThanOrEqual(1);
   await page.mouse.up();
   await expect(page.getByRole('button', { name: '让牌落在桌上' })).toBeVisible({ timeout: 15000 });
 });

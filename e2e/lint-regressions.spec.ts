@@ -29,6 +29,7 @@ test('visibility event cancels a held shuffle immediately', async ({ page }) => 
   await page.goto('/read');
   await page.getByRole('button', { name: '我准备好了' }).click();
   await page.getByRole('button', { name: '这次不设问题' }).click();
+  await page.getByRole('button', { name: '推门' }).click();
   await page.getByRole('button', { name: '开始洗牌' }).click();
   const scene = page.locator('[data-table-scene="play"]');
   await page.keyboard.down('Space');
@@ -62,7 +63,7 @@ test('manual reversed orientation survives timers and does not leak to another p
   await scene.getByRole('button', { name: '2 现在', exact: true }).click();
   await expect(scene.getByRole('button', { name: '看落牌方向' })).toBeVisible();
   await scene.getByRole('button', { name: '3 未来', exact: true }).click();
-  await scene.locator('[data-reveal="primary"]').click();
+  await page.locator('main').locator('[data-reveal="primary"]').click();
   await expect(scene.getByRole('button', { name: '看落牌方向' })).toBeVisible();
   const flipped = scene.locator('[class*="inner"][class*="revealed"]:visible');
   await expect(flipped).toHaveCount(1);

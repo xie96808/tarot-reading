@@ -96,16 +96,18 @@ describe('scene lock', () => {
     expect(celtic.sceneLocked).toBe(false);
   });
 
-  it('ignores scene selection when the pause flag is off', () => {
-    expect(SCENE_PAUSE_ENABLED).toBe(false);
+  it('follows the production pause flag, and ignores scene selection when that flag is off', () => {
+    expect(SCENE_PAUSE_ENABLED).toBe(true);
     let state = createSession();
     state = reduce(state, { type: 'ACK_ENTER' });
     state = reduce(state, { type: 'SUBMIT_QUESTION' });
-    expect(reduce(state, { type: 'SET_SCENE', sceneId: 'door' })).toBe(state);
-    const shuffling = reduce(state, { type: 'CONFIRM_SPREAD' });
+    expect(reduce(state, { type: 'CONFIRM_SPREAD' })).toBe(state);
+    const door = reduce(state, { type: 'SET_SCENE', sceneId: 'door' });
+    expect(door.sceneId).toBe('door');
+    const shuffling = reduce(door, { type: 'CONFIRM_SPREAD' });
     expect(shuffling.stage).toBe('shuffle');
-    expect(shuffling.sceneId).toBeNull();
-    expect(shuffling.sceneLocked).toBe(false);
+    expect(shuffling.sceneId).toBe('door');
+    expect(shuffling.sceneLocked).toBe(true);
 
     const off = { scenePause: false } as const;
     let explicit = createSession();
