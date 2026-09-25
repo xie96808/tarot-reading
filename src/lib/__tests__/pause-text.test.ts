@@ -114,13 +114,14 @@ describe('pause text', () => {
       draws: threeDraws({ cardId: 'pents_01_ace' }, { cardId: 'pents_page' }),
     });
     const past = openPast(hand);
-    expect(past.pause).toBeNull();
-    expect(past.pauseAnswers[0]).toMatchObject({ index: 1, positionId: 'past', kind: 'missing' });
-    const present = openPast(past);
-    expect(present.pause).toBeNull();
-    expect(present.pauseAnswers[1]).toMatchObject({ index: 2, positionId: 'present', kind: 'missing' });
+    expect(past.pause).toMatchObject({ positionId: 'past', index: 1, phase: 'choosing' });
+    expect(reduce(past, { type: 'CHOOSE_PAUSE', actionId: 'sip' }, sceneOn)).toBe(past);
+    expect(reduce(past, { type: 'CHOOSE_PAUSE', actionId: 'plant' }, sceneOn).pause?.phase).toBe('writing');
+    const present = openPast(confirm(past, 'plant'));
+    expect(present.pause).toMatchObject({ positionId: 'present', index: 2, phase: 'choosing' });
     expect(reduce(present, { type: 'CHOOSE_PAUSE', actionId: 'look' }, sceneOn)).toBe(present);
-    expect(reduce(present, { type: 'CHOOSE_PAUSE', actionId: 'craft' }, sceneOn)).toBe(present);
+    const craft = reduce(present, { type: 'CHOOSE_PAUSE', actionId: 'craft' }, sceneOn);
+    expect(craft.pause?.phase).toBe('writing');
   });
 
   it('sets keptPauseIndex only when exactly one answer can be kept', () => {
