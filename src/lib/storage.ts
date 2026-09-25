@@ -129,6 +129,13 @@ function isValidSession(value: unknown): value is RitualSession {
   return true;
 }
 
+export function normalizeSession(session: RitualSession): RitualSession {
+  const raw = session as RitualSession & { sceneId?: unknown; sceneLocked?: unknown };
+  const sceneId = raw.sceneId === 'door' || raw.sceneId === 'hand' ? raw.sceneId : null;
+  const sceneLocked = raw.sceneLocked === true;
+  return { ...session, sceneId, sceneLocked };
+}
+
 export function loadSession(): RitualSession | null {
   const raw = readStore('session', SESSION_STORAGE_KEY);
   if (!raw) return null;
@@ -138,7 +145,7 @@ export function loadSession(): RitualSession | null {
       writeStore('session', SESSION_STORAGE_KEY, null);
       return null;
     }
-    return parsed;
+    return normalizeSession(parsed);
   } catch {
     writeStore('session', SESSION_STORAGE_KEY, null);
     return null;
