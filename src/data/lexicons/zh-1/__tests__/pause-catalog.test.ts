@@ -1,9 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { MAJOR_IDS } from '@/data/card-ids';
+import { MAJOR_IDS, MINOR_IDS } from '@/data/card-ids';
 import { CARDS } from '@/data/lexicons/zh-1';
+import { DOOR_CUPS_OFFERS } from '../pauses/door-cups';
 import { DOOR_MAJOR_OFFERS } from '../pauses/door-majors';
+import { DOOR_PENTS_OFFERS } from '../pauses/door-pents';
+import { lookupPauseOffer } from '../pauses/examples';
 import type { PauseOffer } from '../pauses/types';
 import { validateDoorOffers } from '../pauses/validate';
+
+const CUP_IDS = MINOR_IDS.filter((id) => id.startsWith('cups_'));
+const PENT_IDS = MINOR_IDS.filter((id) => id.startsWith('pents_'));
+const CUP_NUMBER_IDS = new Set(
+  (['01_ace', '02', '03', '04', '05', '06', '07', '08', '09', '10'] as const).map((rank) => `cups_${rank}`),
+);
+const CRAFT_WORDS = ['特长', '你擅长', '哪一种手艺', '手艺'] as const;
+
+function offerBlob(offer: PauseOffer): string {
+  const prompts =
+    offer.pauseIndex === 1
+      ? [offer.promptZh]
+      : [offer.promptAfterActionZh, offer.promptAfterSkipZh];
+  return [...prompts, ...offer.actions.flatMap((item) => [item.labelZh, item.sentenceZh])].join('\n');
+}
+
+function coverKeys(ids: readonly string[]): string[] {
+  return ids.flatMap((cardId) =>
+    (['upright', 'reversed'] as const).flatMap((orientation) =>
+      ([1, 2] as const).map((pauseIndex) => `${cardId}|${orientation}|${pauseIndex}`),
+    ),
+  );
+}
 
 function primaryPrompt(offer: PauseOffer): string {
   return offer.pauseIndex === 1 ? offer.promptZh : offer.promptAfterActionZh;
@@ -94,5 +120,57 @@ describe('door major pause catalog', () => {
     expect(validateDoorOffers([skipped]).some((failure) => failure.includes('沿着刚才那一步'))).toBe(
       true,
     );
+  });
+});
+
+describe('door cups and pents pause catalog', () => {
+  it('returns no skeleton failures', () => {
+    expect(validateDoorOffers(DOOR_CUPS_OFFERS)).toEqual([]);
+    expect(validateDoorOffers(DOOR_PENTS_OFFERS)).toEqual([]);
+  });
+
+  it('covers every cup and every pent, both orientations, and both pauses', () => {
+    expect(DOOR_MAJOR_OFFERS).toHaveLength(88);
+    expect(DOOR_CUPS_OFFERS).toHaveLength(56);
+    expect(DOOR_PENTS_OFFERS).toHaveLength(56);
+    expect(DOOR_CUPS_OFFERS.every((offer) => offer.sceneId === 'door')).toBe(true);
+    expect(DOOR_PENTS_OFFERS.every((offer) => offer.sceneId === 'door')).toBe(true);
+    const cupKeys = DOOR_CUPS_OFFERS.map(
+      (offer) => `${offer.cardId}|${offer.orientation}|${offer.pauseIndex}`,
+    );
+    const pentKeys = DOOR_PENTS_OFFERS.map(
+      (offer) => `${offer.cardId}|${offer.orientation}|${offer.pauseIndex}`,
+    );
+    expect([...cupKeys].sort()).toEqual([...coverKeys(CUP_IDS)].sort());
+    expect([...pentKeys].sort()).toEqual([...coverKeys(PENT_IDS)].sort());
+  });
+
+  it('deep-equals the four locked door examples', () => {
+    const locked = [
+      ['cups_01_ace', 'upright', 1, DOOR_CUPS_OFFERS],
+      ['cups_01_ace', 'reversed', 1, DOOR_CUPS_OFFERS],
+      ['cups_02', 'upright', 2, DOOR_CUPS_OFFERS],
+      ['pents_page', 'upright', 2, DOOR_PENTS_OFFERS],
+    ] as const;
+    for (const [cardId, orientation, pauseIndex, catalog] of locked) {
+      const offer = catalog.find(
+        (item) =>
+          item.cardId === cardId &&
+          item.orientation === orientation &&
+          item.pauseIndex === pauseIndex,
+      );
+      expect(offer).toEqual(lookupPauseOffer('door', cardId, orientation, pauseIndex));
+    }
+  });
+
+  it('keeps craft words out of cup number cards and every door pent', () => {
+    const cupNumbers = DOOR_CUPS_OFFERS.filter((offer) => CUP_NUMBER_IDS.has(offer.cardId));
+    expect(cupNumbers).toHaveLength(40);
+    for (const offer of [...cupNumbers, ...DOOR_PENTS_OFFERS]) {
+      const blob = offerBlob(offer);
+      for (const word of CRAFT_WORDS) {
+        expect(blob, `${offer.cardId} ${offer.orientation} pause ${offer.pauseIndex}`).not.toContain(word);
+      }
+    }
   });
 });
