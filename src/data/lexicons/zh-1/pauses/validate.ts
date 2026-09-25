@@ -1,11 +1,16 @@
 import { CARDS } from '@/data/lexicons/zh-1';
 import type { PauseOffer } from './types';
 
-const DOOR_LEAVE_LABEL = '先把门带上';
+const LEAVE_LABEL = {
+  door: '先把门带上',
+  hand: '放回桌上',
+} as const;
+
 const AFTER_ACTION = '沿着刚才那一步';
 const AFTER_SKIP = '刚才你没有点';
 
-const FORBIDDEN_SUBSTRINGS = ['人格', '命运', '结局已定', '特长', '你擅长', '哪一种手艺'] as const;
+const ALWAYS_FORBIDDEN = ['人格', '命运', '结局已定'] as const;
+const CRAFT_SUBSTRINGS = ['特长', '你擅长', '哪一种手艺'] as const;
 
 function promptsOf(offer: PauseOffer): readonly string[] {
   if (offer.pauseIndex === 1) return [offer.promptZh];
@@ -16,13 +21,23 @@ function whereOf(offer: PauseOffer, index: number): string {
   return `${offer.cardId} ${offer.orientation} pause ${offer.pauseIndex} [${index}]`;
 }
 
-export function validateDoorOffers(offers: readonly PauseOffer[]): string[] {
+function craftAllowed(offer: PauseOffer, scene: 'door' | 'hand'): boolean {
+  if (scene !== 'hand') return false;
+  const rank = CARDS[offer.cardId].rank;
+  return rank === 'page' || rank === 'knight' || rank === 'queen' || rank === 'king';
+}
+
+export function validateDoorOffers(
+  offers: readonly PauseOffer[],
+  scene: 'door' | 'hand' = 'door',
+): string[] {
   const failures: string[] = [];
   const seen = new Set<string>();
+  const leaveLabel = LEAVE_LABEL[scene];
 
   offers.forEach((offer, index) => {
     const where = whereOf(offer, index);
-    if (offer.sceneId !== 'door') failures.push(`${where}: sceneId must be door`);
+    if (offer.sceneId !== scene) failures.push(`${where}: sceneId must be ${scene}`);
 
     const key = `${offer.sceneId}|${offer.cardId}|${offer.orientation}|${offer.pauseIndex}`;
     if (seen.has(key)) failures.push(`${where}: duplicate offer`);
@@ -42,8 +57,8 @@ export function validateDoorOffers(offers: readonly PauseOffer[]): string[] {
     ) {
       failures.push(`${where}: actions must be engage, engage, leave`);
     }
-    if (third && third.labelZh !== DOOR_LEAVE_LABEL) {
-      failures.push(`${where}: leave label must be ${DOOR_LEAVE_LABEL}`);
+    if (third && third.labelZh !== leaveLabel) {
+      failures.push(`${where}: leave label must be ${leaveLabel}`);
     }
     if (first && second && third) {
       const ids = [first.id, second.id, third.id];
@@ -90,6 +105,7 @@ export function validateDoorOffers(offers: readonly PauseOffer[]): string[] {
       }
     }
 
+    const allowCraft = craftAllowed(offer, scene);
     for (const [field, text] of fields) {
       if (text.trim() === '') failures.push(`${where}: ${field} is empty`);
       if (!field.endsWith('.label') && !field.endsWith('.sentence')) {
@@ -98,8 +114,13 @@ export function validateDoorOffers(offers: readonly PauseOffer[]): string[] {
           failures.push(`${where}: ${field} must be one open question`);
         }
       }
-      for (const word of FORBIDDEN_SUBSTRINGS) {
+      for (const word of ALWAYS_FORBIDDEN) {
         if (text.includes(word)) failures.push(`${where}: ${field} contains ${word}`);
+      }
+      if (!allowCraft) {
+        for (const word of CRAFT_SUBSTRINGS) {
+          if (text.includes(word)) failures.push(`${where}: ${field} contains ${word}`);
+        }
       }
       if (text.includes('<') || text.includes('>')) {
         failures.push(`${where}: ${field} contains html`);
