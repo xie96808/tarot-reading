@@ -23,6 +23,9 @@ function entry(question?: string): HistoryEntry {
       saved: true,
       savePrivate: true,
       note: '',
+      sceneId: null,
+      pauseAnswers: [],
+      keptPauseIndex: null,
     },
   };
 }

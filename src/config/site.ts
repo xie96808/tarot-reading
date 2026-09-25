@@ -10,5 +10,6 @@ export const SESSION_STORAGE_KEY = 'tarot.ritual.v2';
 export const HISTORY_STORAGE_KEY = 'tarot.history.v2';
 export const MAX_QUESTION_CODEPOINTS = 200;
 export const MAX_NOTE_CODEPOINTS = 200;
+export const MAX_PAUSE_LINE_CODEPOINTS = 40;
 export const MAX_READING_ID_LENGTH = 1500;
 export const HISTORY_LIMIT = 20;

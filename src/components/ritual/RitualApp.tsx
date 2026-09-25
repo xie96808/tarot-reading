@@ -84,7 +84,14 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     const privateOk = state.receipt.savePrivate;
     const receipt = privateOk
       ? state.receipt
-      : { ...state.receipt, question: '', note: '' };
+      : {
+          ...state.receipt,
+          question: '',
+          note: '',
+          sceneId: null,
+          pauseAnswers: [],
+          keptPauseIndex: null,
+        };
     pushHistory({
       receipt,
       question: privateOk ? state.receipt.question || undefined : undefined,

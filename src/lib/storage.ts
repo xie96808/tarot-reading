@@ -1,5 +1,6 @@
 import { HISTORY_LIMIT, HISTORY_STORAGE_KEY, SESSION_STORAGE_KEY } from '@/config/site';
-import type { ReadingReceipt, RitualSession } from '@/lib/ritual-machine';
+import { SPREADS } from '@/data/lexicons/zh-1/spreads';
+import type { PauseAnswer, PauseDraft, PauseIndex, ReadingReceipt, RitualSession } from '@/lib/ritual-machine';
 
 export type HistoryEntry = {
   receipt: ReadingReceipt;
@@ -129,11 +130,74 @@ function isValidSession(value: unknown): value is RitualSession {
   return true;
 }
 
+function isPauseIndex(value: unknown): value is PauseIndex {
+  return value === 1 || value === 2;
+}
+
+function positionForIndex(index: PauseIndex): 'past' | 'present' {
+  return index === 1 ? 'past' : 'present';
+}
+
+function isPauseDraft(value: unknown): value is PauseDraft {
+  if (!value || typeof value !== 'object') return false;
+  const draft = value as Record<string, unknown>;
+  if (!isPauseIndex(draft.index)) return false;
+  if (draft.positionId !== positionForIndex(draft.index)) return false;
+  if (draft.phase !== 'choosing' && draft.phase !== 'writing') return false;
+  if (draft.actionId !== null && typeof draft.actionId !== 'string') return false;
+  if (typeof draft.custom !== 'string') return false;
+  return true;
+}
+
+function isPauseAnswer(value: unknown): value is PauseAnswer {
+  if (!value || typeof value !== 'object') return false;
+  const answer = value as Record<string, unknown>;
+  if (!isPauseIndex(answer.index)) return false;
+  if (answer.positionId !== positionForIndex(answer.index)) return false;
+  if (answer.kind === 'skip' || answer.kind === 'missing') return true;
+  if (answer.kind !== 'action') return false;
+  return typeof answer.actionId === 'string' && answer.actionId.length > 0 && typeof answer.custom === 'string';
+}
+
+function readAnswers(value: unknown): { answers: PauseAnswer[]; bad: boolean } {
+  if (value === undefined) return { answers: [], bad: false };
+  if (!Array.isArray(value) || !value.every(isPauseAnswer)) return { answers: [], bad: true };
+  const indexes = new Set(value.map((answer) => answer.index));
+  if (indexes.size !== value.length) return { answers: [], bad: true };
+  return { answers: value, bad: false };
+}
+
+function readPauseFields(raw: Record<string, unknown>, sceneLocked: boolean): {
+  pause: PauseDraft | null;
+  pauseAnswers: PauseAnswer[];
+} {
+  const pauseBad = raw.pause != null && !isPauseDraft(raw.pause);
+  const answers = readAnswers(raw.pauseAnswers);
+  if (pauseBad || answers.bad) return { pause: null, pauseAnswers: [] };
+  return {
+    pause: sceneLocked && isPauseDraft(raw.pause) ? raw.pause : null,
+    pauseAnswers: answers.answers,
+  };
+}
+
+function spreadFullyRevealed(session: Extract<RitualSession, { stage: 'reveal' }>): boolean {
+  const spread = SPREADS[session.spreadId as keyof typeof SPREADS];
+  if (!spread || !Array.isArray(session.revealed)) return false;
+  return spread.positions.every((position) => session.revealed.includes(position.id));
+}
+
 export function normalizeSession(session: RitualSession): RitualSession {
-  const raw = session as RitualSession & { sceneId?: unknown; sceneLocked?: unknown };
+  const raw = session as RitualSession & Record<string, unknown>;
   const sceneId = raw.sceneId === 'door' || raw.sceneId === 'hand' ? raw.sceneId : null;
   const sceneLocked = raw.sceneLocked === true;
-  return { ...session, sceneId, sceneLocked };
+  const { pause, pauseAnswers } = readPauseFields(raw, sceneLocked);
+  const keptPauseIndex = raw.keptPauseIndex === 1 || raw.keptPauseIndex === 2 ? raw.keptPauseIndex : null;
+  const futureBeat = raw.futureBeat === 'open' ? 'open' : null;
+  if (session.stage === 'reveal' && spreadFullyRevealed(session)) {
+    // A fully revealed spread stuck on reveal has no flip button and no reading.
+    return { ...session, sceneId, sceneLocked, pause, pauseAnswers, keptPauseIndex, stage: 'read', futureBeat: null };
+  }
+  return { ...session, sceneId, sceneLocked, pause, pauseAnswers, keptPauseIndex, futureBeat };
 }
 
 export function loadSession(): RitualSession | null {
@@ -176,7 +240,14 @@ function sanitizeHistoryEntry(entry: HistoryEntry): HistoryEntry {
     ...entry,
     question: undefined,
     note: undefined,
-    receipt: { ...entry.receipt, question: '', note: '' },
+    receipt: {
+      ...entry.receipt,
+      question: '',
+      note: '',
+      sceneId: null,
+      pauseAnswers: [],
+      keptPauseIndex: null,
+    },
   };
 }
 
