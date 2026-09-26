@@ -97,10 +97,17 @@
   width: 100%;
 }
 
+.row {
+  position: relative;
+  z-index: 1;
+}
+
 .desktopPause {
+  position: relative;
+  z-index: 0;
   width: 100%;
   max-width: 36rem;
-  margin: var(--space-4) auto 0;
+  margin: var(--space-5) auto 0;
 }
 
 .step {
@@ -124,6 +131,11 @@
   background: transparent;
   color: var(--parchment-dim);
   border: 1px solid rgba(196, 163, 90, 0.3);
+}
+
+.stepNav button:disabled {
+  opacity: 0.38;
+  cursor: default;
 }
 
 .navCurrent {

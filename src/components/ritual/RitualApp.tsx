@@ -13,11 +13,12 @@ import { commitShuffle, newOperationId, randomCutIndex } from '@/lib/ritual-effe
 import { canResume, createSession, persistable, reduce, stepPositionId, type PauseAnswer, type RitualSession } from '@/lib/ritual-machine';
 import { HAND_SCENE_ENABLED, SCENE_PAUSE_ENABLED } from '@/lib/scene';
 import { composeSceneClose, type PauseResolution } from '@/lib/scene-close';
-import { lockedSceneVisual, meaningAfterPauseMs, pauseActionsReadyMs, sceneBeatDurations } from '@/lib/scene-beats';
+import { canFocusGatedPosition, nextGatedPosition } from '@/lib/pause';
+import { lockedSceneVisual, meaningAfterPauseMs, pauseActionsReadyMs, sceneBeatDurations, type SceneVisual } from '@/lib/scene-beats';
 import { toSharePayload } from '@/lib/share-payload';
 import type { Draw } from '@/lib/shuffle';
 import { clearSession, loadSession, pushHistory, saveSession, subscribeStorageStatus, storageStatusSnapshot, serverStorageStatusSnapshot } from '@/lib/storage';
-import { loadFaceIndex, pictureSources, type FaceUrls } from '@/lib/faces';
+import { loadFaceIndex, pictureSources, subscribeFaceIndex, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
 import { MOTION, cutProportion, dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
@@ -109,9 +110,10 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     setState((current) => reduce(current, event));
   }, []);
 
+  useEffect(() => subscribeFaceIndex(setFaces), []);
   useEffect(() => {
     let cancelled = false;
-    loadFaceIndex().then((index) => { if (!cancelled) setFaces(index); }).catch(() => { if (!cancelled) setFaceLoadError(true); });
+    loadFaceIndex().catch(() => { if (!cancelled) setFaceLoadError(true); });
     return () => { cancelled = true; };
   }, []);
 
@@ -251,7 +253,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   const navigationLocked = Boolean(sceneLive && revealState && (pause || futureOpen));
   const pauseKey = pause ? `${state.sessionId}:${pause.index}` : null;
   const pauseRestored = pauseKey !== null && restoredPauseKey === pauseKey;
-  const choicesReady = Boolean(pauseKey) && (reducedMotion || pauseRestored || actionsReady);
   const handFuture = futureOpen && state.sceneId === 'hand';
   if (handFutureOn !== handFuture) {
     setHandFutureOn(handFuture);
@@ -265,21 +266,25 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   }
   const sceneId = state.sceneId;
   const openedAtResume = snapSession === state.sessionId ? restoredRevealed : null;
+  const faceReady = (positionId: string) => {
+    if (!('draws' in state)) return false;
+    const draw = state.draws.find((item) => item.positionId === positionId);
+    return Boolean(draw && faces.has(draw.cardId));
+  };
   const sceneVisuals =
     sceneLive && sceneId && (state.stage === 'reveal' || state.stage === 'read')
-      ? Object.fromEntries(
-          (['past', 'present', 'future'] as const).map((positionId) => [
+      ? (['past', 'present', 'future'] as const).reduce<Record<'past' | 'present' | 'future', SceneVisual>>((visuals, positionId) => {
+          const visual = lockedSceneVisual({
+            sceneId,
             positionId,
-            lockedSceneVisual({
-              sceneId,
-              positionId,
-              revealed: 'revealed' in state ? state.revealed : [],
-              pausePositionId: pause?.positionId ?? null,
-              futureOpen,
-              handFutureSettled: reducedMotion || handSettled,
-            }),
-          ]),
-        )
+            revealed: 'revealed' in state ? state.revealed : [],
+            pausePositionId: pause?.positionId ?? null,
+            futureOpen,
+            handFutureSettled: reducedMotion || handSettled,
+          });
+          visuals[positionId] = (visual === 'door-partial' || visual === 'hand-partial') && !faceReady(positionId) ? 'back' : visual;
+          return visuals;
+        }, { past: 'back', present: 'back', future: 'back' })
       : null;
   const sceneInstant =
     sceneVisuals === null
@@ -293,6 +298,9 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
           ]),
         );
   const pauseDraw = pause && 'draws' in state ? state.draws.find((draw) => draw.positionId === pause.positionId) : undefined;
+  const pauseFaceReady = !pauseDraw || faces.has(pauseDraw.cardId);
+  const choicesReady = Boolean(pauseKey) && pauseFaceReady && (reducedMotion || pauseRestored || actionsReady);
+  const gatedNext = sceneLive && revealState ? nextGatedPosition(revealState) : null;
   const pauseOffer = pause && pauseDraw && sceneId ? lookupPauseOffer(sceneId, pauseDraw.cardId, pauseDraw.orientation, pause.index) : null;
   const previousKind = pause?.index === 2 ? (state.pauseAnswers.find((item) => item.index === 1)?.kind ?? null) : null;
   const meaningAnswer =
@@ -337,10 +345,10 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   }, [handFuture, reducedMotion]);
 
   useEffect(() => {
-    if (!pauseKey || !sceneId || reducedMotion || pauseRestored) return;
+    if (!pauseKey || !sceneId || reducedMotion || pauseRestored || !pauseFaceReady) return;
     const timer = window.setTimeout(() => setActionsReady(true), pauseActionsReadyMs(sceneId, false));
     return () => window.clearTimeout(timer);
-  }, [pauseKey, sceneId, reducedMotion, pauseRestored]);
+  }, [pauseKey, sceneId, reducedMotion, pauseRestored, pauseFaceReady]);
 
   useEffect(() => {
     if (!meaningKey || meaningDelay <= 0) return;
@@ -769,6 +777,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                 sceneVisuals={sceneVisuals}
                 sceneInstant={sceneInstant}
                 revealLocked={navigationLocked}
+                revealablePositionId={sceneLive ? gatedNext ?? '' : undefined}
                 pauseSlot={
                   SCENE_PAUSE_ENABLED && pause && pauseOffer && sceneId ? (
                     <PauseSheet
@@ -778,6 +787,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                       custom={pause.custom}
                       previous={previousKind}
                       actionsEnabled={choicesReady}
+                      pendingFace={!pauseFaceReady}
                       onChoose={(actionId) => dispatch({ type: 'CHOOSE_PAUSE', actionId })}
                       onCustom={(custom) => dispatch({ type: 'SET_PAUSE_CUSTOM', custom })}
                       onConfirm={() => dispatch({ type: 'CONFIRM_PAUSE' })}
@@ -817,9 +827,13 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                     disabled={navigationLocked}
                     onClick={() => dispatch({ type: 'REVEAL_NEXT' })}
                   >
-                    {state.revealed.includes(state.selectedPositionId)
-                      ? COPY.revealNextClosed
-                      : COPY.revealSelected(SPREADS[state.spreadId].positions.find((p) => p.id === state.selectedPositionId)?.nameZh ?? '')}
+                    {gatedNext || !state.revealed.includes(state.selectedPositionId)
+                      ? COPY.revealSelected(
+                          (gatedNext
+                            ? SPREADS.three.positions.find((position) => position.id === gatedNext)?.nameZh
+                            : SPREADS[state.spreadId].positions.find((position) => position.id === state.selectedPositionId)?.nameZh) ?? '',
+                        )
+                      : COPY.revealNextClosed}
                   </button>
                 ) : null}
                 {SCENE_PAUSE_ENABLED && meaningReading ? (
@@ -833,7 +847,11 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               <button
                 type="button"
                 className={styles.ghost}
-                disabled={navigationLocked || stepPositionId(state.spreadId, state.selectedPositionId, -1) === state.selectedPositionId}
+                disabled={
+                  navigationLocked ||
+                  stepPositionId(state.spreadId, state.selectedPositionId, -1) === state.selectedPositionId ||
+                  (sceneLive && revealState ? !canFocusGatedPosition(revealState, stepPositionId(state.spreadId, state.selectedPositionId, -1)) : false)
+                }
                 onClick={() => dispatch({ type: 'STEP_SELECTION', delta: -1 })}
               >
                 {COPY.stepPrev}
@@ -841,7 +859,11 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               <button
                 type="button"
                 className={styles.ghost}
-                disabled={navigationLocked || stepPositionId(state.spreadId, state.selectedPositionId, 1) === state.selectedPositionId}
+                disabled={
+                  navigationLocked ||
+                  stepPositionId(state.spreadId, state.selectedPositionId, 1) === state.selectedPositionId ||
+                  (sceneLive && revealState ? !canFocusGatedPosition(revealState, stepPositionId(state.spreadId, state.selectedPositionId, 1)) : false)
+                }
                 onClick={() => dispatch({ type: 'STEP_SELECTION', delta: 1 })}
               >
                 {COPY.stepNext}

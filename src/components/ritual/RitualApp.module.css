@@ -226,6 +226,12 @@
   color: var(--ash);
 }
 
+.center .scenePicker button[aria-pressed='true'] {
+  border-color: var(--candle);
+  background: rgba(196, 163, 90, 0.2);
+  box-shadow: inset 4px 0 0 var(--candle);
+}
+
 .revealBar {
   display: flex;
   flex-wrap: wrap;

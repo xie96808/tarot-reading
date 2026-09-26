@@ -170,15 +170,15 @@
 .palm {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: 8%;
   z-index: 0;
-  width: calc(var(--board-w, 0px) * 0.46);
-  height: calc(var(--board-h, 0px) * 0.18);
-  transform: translate(-50%, 40%);
+  width: 168%;
+  height: 38%;
   border: 1px solid var(--candle);
   border-radius: 50%;
   background: transparent;
   pointer-events: none;
+  transform: translateX(-50%);
 }
 
 .flip {
@@ -240,9 +240,22 @@
   transition: none;
 }
 
-[data-visual='hand-partial'][data-scene-motion='play'] .flip {
-  transform: translateY(var(--palm-shift, 0%));
-  transition: transform var(--palm-ms, 0ms) cubic-bezier(0.22, 1, 0.36, 1);
+[data-visual='hand-partial'][data-scene-motion='play']:not([data-scene-hold='true']) .palm {
+  animation: palmOpen var(--palm-ms, 480ms) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+[data-visual='hand-partial'][data-scene-motion='play']:not([data-scene-hold='true']) .flip {
+  animation: palmDrop var(--palm-ms, 480ms) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes palmOpen {
+  from { opacity: 0; transform: translateX(-50%) scale(0.7); }
+  to { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+@keyframes palmDrop {
+  from { transform: translate3d(0, -46%, 0) rotate(-8deg); }
+  to { transform: translate3d(0, var(--palm-shift, 12%), 0) rotate(0deg); }
 }
 
 [data-visual='hand-partial'][data-scene-motion='instant'] .flip {
@@ -275,6 +288,11 @@
 [data-reduced='true'] .flip {
   transform: none;
   transition: none;
+  animation: none;
+}
+
+[data-reduced='true'] .palm {
+  animation: none;
 }
 
 [data-reduced='true'] .inner,
@@ -306,6 +324,7 @@
 [data-scene-hold='true'][data-visual='door-full'] .flip {
   transform: none;
   transition: none;
+  animation: none;
 }
 
 [data-scene-hold='true'][data-visual='hand-partial'] .inner,

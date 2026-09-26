@@ -143,8 +143,9 @@ describe('pause gates', () => {
     expect(state.draws[0]?.positionId).toBe('present');
     expect(reduce(state, { type: 'REVEAL_POSITION', positionId: 'present' }, sceneOn)).toBe(state);
     expect(reduce(state, { type: 'REVEAL_POSITION', positionId: 'future' }, sceneOn)).toBe(state);
-    const selected = reduce(state, { type: 'SELECT_POSITION', positionId: 'present' }, sceneOn);
-    const past = reduce(selected, { type: 'REVEAL_NEXT' }, sceneOn);
+    expect(reduce(state, { type: 'SELECT_POSITION', positionId: 'present' }, sceneOn)).toBe(state);
+    expect(reduce(state, { type: 'STEP_SELECTION', delta: 1 }, sceneOn)).toBe(state);
+    const past = reduce(state, { type: 'REVEAL_NEXT' }, sceneOn);
     expect(past.stage).toBe('reveal');
     if (past.stage !== 'reveal' || !past.pause) throw new Error('expected a past draft');
     expect(past.pause).toEqual({ positionId: 'past', index: 1, phase: 'choosing', actionId: null, custom: '' });

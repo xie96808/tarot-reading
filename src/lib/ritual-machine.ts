@@ -2,7 +2,7 @@ import { MAX_PAUSE_LINE_CODEPOINTS } from '@/config/site';
 import type { CardId } from '@/data/card-ids';
 import { lookupPauseOffer } from '@/data/lexicons/zh-1/pauses';
 import { SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
-import { nextGatedPosition, shouldOpenPauseText } from '@/lib/pause';
+import { canFocusGatedPosition, nextGatedPosition, shouldOpenPauseText } from '@/lib/pause';
 import { HAND_SCENE_ENABLED, SCENE_PAUSE_ENABLED, type SceneId } from '@/lib/scene';
 import { cutDeck, drawTop, type Draw, type Orientation, type ShuffledCard } from '@/lib/shuffle';
 
@@ -524,7 +524,14 @@ function reduceReveal(state: RevealState, event: RitualEvent, scenePause: boolea
   ) {
     return state;
   }
-  if (event.type === 'SELECT_POSITION' || event.type === 'STEP_SELECTION' || event.type === 'SET_VIEW') {
+  if (event.type === 'SET_VIEW') return reduceRevealUngated(state, event);
+  if (event.type === 'SELECT_POSITION') {
+    if (!canFocusGatedPosition(state, event.positionId)) return state;
+    return reduceRevealUngated(state, event);
+  }
+  if (event.type === 'STEP_SELECTION') {
+    const nextId = stepPositionId(state.spreadId, state.selectedPositionId, event.delta);
+    if (!canFocusGatedPosition(state, nextId)) return state;
     return reduceRevealUngated(state, event);
   }
   if (event.type === 'REVEAL_POSITION' || event.type === 'REVEAL_NEXT') {
