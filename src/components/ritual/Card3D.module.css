@@ -170,13 +170,12 @@
 .palm {
   position: absolute;
   left: 50%;
-  bottom: 8%;
+  top: -42%;
   z-index: 0;
-  width: 168%;
-  height: 38%;
-  border: 1px solid var(--candle);
-  border-radius: 50%;
-  background: transparent;
+  width: 250%;
+  height: auto;
+  border: 0;
+  background: none;
   pointer-events: none;
   transform: translateX(-50%);
 }
