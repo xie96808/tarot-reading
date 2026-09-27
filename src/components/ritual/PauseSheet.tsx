@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useId, useRef, type CSSProperties } from 'react';
-import Link from 'next/link';
 import { MAX_PAUSE_LINE_CODEPOINTS } from '@/config/site';
+import { GuardedLink } from '@/components/chrome/GuardedLink';
 import type { PauseOffer } from '@/data/lexicons/zh-1/pauses/types';
 import { COPY } from '@/i18n/zh-CN';
 import { MOTION } from '@/lib/motion';
@@ -17,6 +17,7 @@ type PauseSheetProps = {
   custom: string;
   previous: 'action' | 'skip' | 'missing' | null;
   actionsEnabled: boolean;
+  pendingFace?: boolean;
   onChoose: (actionId: string) => void;
   onCustom: (custom: string) => void;
   onConfirm: () => void;
@@ -31,6 +32,7 @@ export function PauseSheet({
   custom,
   previous,
   actionsEnabled,
+  pendingFace = false,
   onChoose,
   onCustom,
   onConfirm,
@@ -65,7 +67,7 @@ export function PauseSheet({
           <h2 id={promptId} ref={promptRef} className={styles.prompt} tabIndex={0}>
             {promptForPause(offer, previous)}
           </h2>
-          <Crisis />
+          {pendingFace ? <p className={styles.body} role="status">正在准备牌面…</p> : null}
           <div className={styles.actions}>
             {engages.map((action) => (
               <button
@@ -95,6 +97,7 @@ export function PauseSheet({
               {COPY.pauseSkip}
             </button>
           </div>
+          <Crisis />
           <p className={styles.privacy} tabIndex={0}>
             {COPY.pausePrivacy}
           </p>
@@ -147,7 +150,7 @@ export function PauseSheet({
 function Crisis() {
   return (
     <p className={styles.body}>
-      {COPY.crisisResources} <Link href="/about#help">方法页</Link>
+      {COPY.crisisResources} <GuardedLink href="/about#help">方法页</GuardedLink>
     </p>
   );
 }

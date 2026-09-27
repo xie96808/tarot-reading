@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { COPY } from '@/i18n/zh-CN';
+import { GuardedLink } from './GuardedLink';
 import styles from './Footer.module.css';
 
 export function Footer() {
@@ -9,8 +9,8 @@ export function Footer() {
       <p className={styles.meta}>
         <span>象征与自我观照 · 非命运判决</span>
         <span className={styles.links}>
-          <Link href="/about">{COPY.navMethod}</Link>
-          <Link href="/privacy">{COPY.navPrivacy}</Link>
+          <GuardedLink href="/about">{COPY.navMethod}</GuardedLink>
+          <GuardedLink href="/privacy">{COPY.navPrivacy}</GuardedLink>
           {COPY.icp ? (
             <a href={COPY.icpHref} rel="noreferrer">
               {COPY.icp}

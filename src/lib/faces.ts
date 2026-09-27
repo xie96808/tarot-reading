@@ -14,13 +14,14 @@ type Manifest = {
 };
 
 let cached: Map<string, FaceUrls> | null = null;
+let pending: Promise<Map<string, FaceUrls>> | null = null;
+const listeners = new Set<(faces: Map<string, FaceUrls>) => void>();
 
-export async function loadFaceIndex(): Promise<Map<string, FaceUrls>> {
-  if (cached) return cached;
+async function fetchFaceIndex(): Promise<Map<string, FaceUrls>> {
   const res = await fetch('/cards/rws-1/manifest.json');
   if (!res.ok) throw new Error('deck manifest missing');
   const manifest = (await res.json()) as Manifest;
-  cached = new Map(
+  return new Map(
     manifest.cards.map((card) => [
       card.cardId,
       {
@@ -29,7 +30,33 @@ export async function loadFaceIndex(): Promise<Map<string, FaceUrls>> {
       },
     ]),
   );
-  return cached;
+}
+
+export function loadFaceIndex(): Promise<Map<string, FaceUrls>> {
+  if (cached) return Promise.resolve(cached);
+  if (!pending) {
+    pending = fetchFaceIndex()
+      .then((index) => {
+        cached = index;
+        pending = null;
+        for (const listener of [...listeners]) listener(index);
+        return index;
+      })
+      .catch((error: unknown) => {
+        pending = null;
+        throw error;
+      });
+  }
+  return pending;
+}
+
+/** Current subscribers are told when the catalog arrives, even if an earlier caller unmounted. */
+export function subscribeFaceIndex(listener: (faces: Map<string, FaceUrls>) => void): () => void {
+  listeners.add(listener);
+  if (cached) listener(cached);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function pictureSources(urls: FaceUrls, sizes: string) {

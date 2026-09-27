@@ -36,6 +36,8 @@ type TableauProps = {
   sceneVisuals?: Partial<Record<string, SceneVisual>> | null;
   sceneInstant?: Partial<Record<string, boolean>> | null;
   revealLocked?: boolean;
+  /** When set, only this position may be opened. Empty string means none. Omit to allow every unrevealed card. */
+  revealablePositionId?: string;
   pauseSlot?: ReactNode;
 };
 
@@ -51,6 +53,7 @@ export function Tableau({
   sceneVisuals = null,
   sceneInstant = null,
   revealLocked = false,
+  revealablePositionId,
   pauseSlot = null,
 }: TableauProps) {
   const [selection, setSelection] = useState({ revealed, position: selectedPositionId, animate: false });
@@ -107,6 +110,9 @@ export function Tableau({
     faceOn(positionId, isRevealed)
       ? `${CARDS[cardId].nameZh} ${orientation === 'reversed' ? COPY.reversed : COPY.upright}`
       : fallback;
+  const canOpen = (positionId: string) => revealablePositionId === undefined || revealablePositionId === positionId;
+  const canFocus = (positionId: string) =>
+    revealablePositionId === undefined || revealed.includes(positionId) || revealablePositionId === positionId;
 
   const stepped = (
     <div key={selected.positionId} className={styles.step}>
@@ -131,7 +137,7 @@ export function Tableau({
         alt={cardAlt(selected.positionId, selected.cardId, selected.orientation, selectedMeta.nameZh, selectedRevealed)}
         label={selectedMeta.nameZh}
         sceneInstant={sceneInstant?.[selected.positionId] === true}
-        onReveal={revealLocked || selectedRevealed || !onReveal ? undefined : () => onReveal(selected.positionId)}
+        onReveal={revealLocked || selectedRevealed || !onReveal || !canOpen(selected.positionId) ? undefined : () => onReveal(selected.positionId)}
       />
       <div className={styles.stepNav}>
         {spread.positions.map((position) => (
@@ -139,7 +145,7 @@ export function Tableau({
             key={position.id}
             type="button"
             className={position.id === selected.positionId ? styles.navCurrent : undefined}
-            disabled={revealLocked}
+            disabled={revealLocked || !canFocus(position.id)}
             onClick={() => onSelect(position.id)}
           >
             {`${position.drawOrder} ${position.nameZh}`}
@@ -190,8 +196,8 @@ export function Tableau({
                     } as CSSProperties
                   }
                 >
-                  {revealLocked ? null : (
-                    <button type="button" className={styles.hit} data-part="face" onClick={() => { onSelect(position.id); if (!isRevealed && !dealing) onReveal?.(position.id); }}>
+                  {revealLocked || !canFocus(position.id) ? null : (
+                    <button type="button" className={styles.hit} data-part="face" onClick={() => { onSelect(position.id); if (!isRevealed && !dealing && canOpen(position.id)) onReveal?.(position.id); }}>
                       <span className="visually-hidden">{position.nameZh}</span>
                     </button>
                   )}
@@ -205,7 +211,7 @@ export function Tableau({
                     dealDelayMs={dealDelayMs(position.drawOrder - 1, count)}
                     alt={isRevealed ? `${CARDS[draw.cardId].nameZh} ${draw.orientation === 'reversed' ? COPY.reversed : COPY.upright}` : position.nameZh}
                     label={position.nameZh}
-                    onReveal={revealLocked || isRevealed || !onReveal || dealing ? undefined : () => onReveal(position.id)}
+                    onReveal={revealLocked || isRevealed || !onReveal || dealing || !canOpen(position.id) ? undefined : () => onReveal(position.id)}
                   />
                 </div>
               );
@@ -236,8 +242,8 @@ export function Tableau({
               role="listitem"
               className={`${styles.item} ${selectedPositionId === position.id ? styles.selected : ''}`}
             >
-              {revealLocked ? null : (
-                <button type="button" className={styles.hit} data-part="face" onClick={() => { onSelect(position.id); if (!isRevealed && !dealing) onReveal?.(position.id); }}>
+              {revealLocked || !canFocus(position.id) ? null : (
+                <button type="button" className={styles.hit} data-part="face" onClick={() => { onSelect(position.id); if (!isRevealed && !dealing && canOpen(position.id)) onReveal?.(position.id); }}>
                   <span className="visually-hidden">{position.nameZh}</span>
                 </button>
               )}
@@ -252,7 +258,7 @@ export function Tableau({
                 alt={cardAlt(position.id, draw.cardId, draw.orientation, position.nameZh, isRevealed)}
                 label={position.nameZh}
                 sceneInstant={sceneInstant?.[position.id] === true}
-                onReveal={revealLocked || isRevealed || !onReveal ? undefined : () => onReveal(position.id)}
+                onReveal={revealLocked || isRevealed || !onReveal || !canOpen(position.id) ? undefined : () => onReveal(position.id)}
               />
             </div>
           );

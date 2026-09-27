@@ -186,7 +186,7 @@ export function Card3D({
     >
       {hand ? (
         <div className={styles.faceBox}>
-          <div className={styles.palm} data-part="palm" aria-hidden="true" />
+          <img className={styles.palm} data-part="palm" src="/hands/1.png" alt="" />
           {flip}
         </div>
       ) : (

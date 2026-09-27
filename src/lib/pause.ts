@@ -34,3 +34,16 @@ export function nextGatedPosition(state: {
   }
   return null;
 }
+
+/** A locked three-card scene can focus revealed cards and the one position that may open next. */
+export function canFocusGatedPosition(
+  state: {
+    pause: { positionId: 'past' | 'present' } | null;
+    pauseAnswers: readonly { positionId: string }[];
+    revealed: readonly string[];
+  },
+  positionId: string,
+): boolean {
+  if (state.revealed.includes(positionId)) return true;
+  return nextGatedPosition(state) === positionId;
+}
