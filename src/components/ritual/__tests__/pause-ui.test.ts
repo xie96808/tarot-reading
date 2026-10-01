@@ -31,10 +31,10 @@ describe('PauseSheet', () => {
         onRevert: noop,
       }),
     );
-    expect(markup).toContain('门缝里先只露出大半张。点一步，或先不点。');
+    expect(markup).toContain('第一张是过去。先看看，有没有哪个细节让你停了一下？');
     expect(markup).toContain(offer.promptZh);
     expect(markup).toContain('先把门带上');
-    expect(markup).toContain('先不选，看这张牌');
+    expect(markup).toContain('先不聊这个，看这张牌');
     expect(markup).toContain('href="/about#help"');
     expect(markup).toContain('方法页');
     expect(markup).not.toContain('也可以改成自己的话。');
@@ -63,17 +63,17 @@ describe('PauseSheet', () => {
     expect(markup).toContain('返回这几个选择');
     expect(markup.toLowerCase()).toContain('enterkeyhint="done"');
     expect(markup).toContain('已写 2 / 40 字');
-    expect(markup).not.toContain('先不选，看这张牌');
+    expect(markup).not.toContain('先不聊这个，看这张牌');
     expect(markup).not.toContain('先把门带上');
   });
 });
 
 describe('SceneCloseView', () => {
   const sentences = [
-    '这局你选的是推门：门口出现什么由牌决定，房间怎么开由这扇门决定。',
-    '过去这一停，圣杯王牌（正位）前，你点了「先给它起名」。',
-    '现在这一停，圣杯二（正位）前，你没有点选。',
-    '若只沿你在过去点的那一步走，这张权杖王牌（正位）是已经进到视野里的画面。',
+    '三张牌都在桌上。推门只决定怎么看，不改变已经抽出的牌。',
+    '过去这张是圣杯王牌（正位）。我先给这只杯起一个名字，不急着喝。',
+    '现在这张是圣杯二（正位）。',
+    '接下来是权杖王牌（正位）。这张在回应之前就已经抽出，刚才的选择不改变它。',
   ] as [string, string, string, string];
 
   it('asks which sentence to keep when two actions exist', () => {
@@ -86,13 +86,12 @@ describe('SceneCloseView', () => {
         ],
         keptIndex: null,
         selectable: true,
-        skipped: [],
       }),
     );
-    expect(markup).toContain('你点过的两步');
+    expect(markup).toContain('今天先看到这里');
     expect(markup).toContain(sentences[3]);
-    expect(markup).toContain('这两句里，留下哪一句给你自己？未来不是选项。');
-    expect(markup).toContain('先选定要留下的那一句。');
+    expect(markup).toContain('有没有一句你想记下来？也可以不留，直接结束。');
+    expect(markup).not.toContain('先选定要留下的那一句。');
     expect(markup).toContain('type="radio"');
     expect(markup).not.toContain('这是你的命运');
   });
@@ -104,14 +103,13 @@ describe('SceneCloseView', () => {
         kept: [{ index: 1, text: '我先给这只杯起一个名字，不急着喝。' }],
         keptIndex: 1,
         selectable: true,
-        skipped: [{ index: 2, text: sentences[2] }],
       }),
     );
-    expect(markup).toContain('留下的是这一句。未来不是选项。');
+    expect(markup).toContain('你确认过的是这一句。');
     expect(markup).toContain('我先给这只杯起一个名字，不急着喝。');
     expect(markup).toContain(sentences[2]);
     expect(markup).not.toContain('type="radio"');
-    expect(markup).not.toContain('先选定要留下的那一句。');
+    expect(markup).not.toContain('先选定要留下的那一句');
   });
 
   it('does not offer another choice on the end page', () => {
@@ -121,12 +119,11 @@ describe('SceneCloseView', () => {
         kept: [{ index: 1, text: '我先给这只杯起一个名字，不急着喝。' }],
         keptIndex: 1,
         selectable: false,
-        skipped: [],
       }),
     );
     expect(markup).toContain(sentences[0]);
     expect(markup).toContain('我先给这只杯起一个名字，不急着喝。');
-    expect(markup).not.toContain('这两句里，留下哪一句给你自己？');
+    expect(markup).not.toContain('有没有一句你想记下来？');
     expect(markup).not.toContain('type="radio"');
   });
 });

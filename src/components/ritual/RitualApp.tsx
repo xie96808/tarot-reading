@@ -319,21 +319,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     showMeaning && meaningAnswer && 'draws' in state
       ? buildPositionReadings(state.spreadId, state.draws, CARDS).find((item) => item.positionId === meaningAnswer.positionId) ?? null
       : null;
-  const skipped =
-    sceneClose === null
-      ? []
-      : state.pauseAnswers
-          .filter((item) => item.kind === 'skip' && state.pauseAnswers.some((other) => other.kind === 'action'))
-          .map((item) => ({
-            index: item.index,
-            text: item.index === 1 ? sceneClose.sentences[1] : sceneClose.sentences[2],
-          }));
-  const closeBlocked = Boolean(
-    sceneLive &&
-      state.stage === 'read' &&
-      state.pauseAnswers.filter((item) => item.kind === 'action').length === 2 &&
-      state.keptPauseIndex === null,
-  );
   const noteHost = SCENE_PAUSE_ENABLED && state.sceneLocked && state.keptPauseIndex !== null;
 
   useEffect(() => {
@@ -895,7 +880,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                   kept={sceneClose.kept}
                   keptIndex={state.keptPauseIndex}
                   selectable
-                  skipped={skipped}
                   onKeep={(index) => dispatch({ type: 'SET_KEPT_PAUSE', index })}
                 />
               ) : null}
@@ -943,7 +927,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                   />
                   {COPY.savePrivate}
                 </label>
-                <button type="button" className={styles.primary} disabled={closeBlocked} onClick={() => dispatch({ type: 'CLOSE_ACK' })}>
+                <button type="button" className={styles.primary} onClick={() => dispatch({ type: 'CLOSE_ACK' })}>
                   {COPY.readContinue}
                 </button>
               </div>
@@ -963,7 +947,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               kept={sceneClose.kept}
               keptIndex={state.keptPauseIndex}
               selectable={false}
-              skipped={[]}
             />
           ) : null}
           <label className={styles.check}>

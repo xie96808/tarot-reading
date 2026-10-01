@@ -40,7 +40,7 @@ for (const width of [375, 390, 719, 720, 721, 768, 1023, 1024, 1440]) {
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await scene.screenshot({ path: testInfo.outputPath(`table-${width}.png`) });
-    const skip = page.getByRole('button', { name: '先不选，看这张牌' });
+    const skip = page.getByRole('button', { name: '先不聊这个，看这张牌' });
     await next.click();
     await expect(skip).toBeEnabled();
     await skip.click();

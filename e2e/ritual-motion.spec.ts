@@ -43,7 +43,7 @@ for (const width of [390, 1440]) {
     await next.click();
     await expect(page.locator('[data-card-visual]:visible [class*="inner"][class*="revealed"]')).toHaveCount(0);
     await expect(page.locator('[data-card-visual]:visible [class*="inner"][class*="partial"]').first()).toBeVisible();
-    const skip = page.getByRole('button', { name: '先不选，看这张牌' });
+    const skip = page.getByRole('button', { name: '先不聊这个，看这张牌' });
     await expect(skip).toBeEnabled();
     await skip.click();
     await expect(page.locator('[data-card-visual]:visible [class*="inner"][class*="revealed"]').first()).toBeVisible();
@@ -101,7 +101,7 @@ test('every newly revealed mobile position gets its own flip', async ({ page }) 
   await expect(inner).not.toHaveClass(/revealed/);
   await expect.poll(() => inner.evaluate(el => el.getAnimations().some(animation => animation.playState === 'running'))).toBe(true);
   await expect(inner).not.toHaveClass(/revealed/);
-  const skip = page.getByRole('button', { name: '先不选，看这张牌' });
+  const skip = page.getByRole('button', { name: '先不聊这个，看这张牌' });
   await expect(skip).toBeEnabled();
   await skip.click();
   await expect(inner).toHaveClass(/revealed/);

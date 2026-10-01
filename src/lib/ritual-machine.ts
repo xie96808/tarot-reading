@@ -237,10 +237,6 @@ export function reduce(
       }
       if (event.type === 'SET_VIEW') return { ...state, view: event.view };
       if (event.type === 'CLOSE_ACK') {
-        if (scenePause) {
-          const keepable = state.pauseAnswers.filter((answer) => answer.kind === 'action');
-          if (keepable.length === 2 && state.keptPauseIndex === null) return state;
-        }
         const keepPrivate = state.savePrivate;
         const receipt: ReadingReceipt = {
           sessionId: state.sessionId,

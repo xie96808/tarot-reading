@@ -147,7 +147,12 @@ describe('pause text', () => {
     expect(read.stage).toBe('read');
     if (read.stage !== 'read') return;
     expect(read.keptPauseIndex).toBeNull();
-    expect(reduce(read, { type: 'CLOSE_ACK' }, sceneOn)).toBe(read);
+    const closedWithoutKeep = reduce(read, { type: 'CLOSE_ACK' }, sceneOn);
+    expect(closedWithoutKeep.stage).toBe('close');
+    if (closedWithoutKeep.stage === 'close') {
+      expect(closedWithoutKeep.keptPauseIndex).toBeNull();
+      expect(closedWithoutKeep.receipt.keptPauseIndex).toBeNull();
+    }
     const chosen = reduce(read, { type: 'SET_KEPT_PAUSE', index: 1 }, sceneOn);
     if (chosen.stage !== 'read') return;
     expect(chosen.keptPauseIndex).toBe(1);

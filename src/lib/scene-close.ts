@@ -24,8 +24,8 @@ type SceneCloseInput = {
 };
 
 const SCENE_LINE: Record<SceneId, string> = {
-  door: '这局你选的是推门：门口出现什么由牌决定，房间怎么开由这扇门决定。',
-  hand: '这局你选的是过手：手里出现什么由牌决定，手怎么放由这只手决定。',
+  door: '三张牌都在桌上。推门只决定怎么看，不改变已经抽出的牌。',
+  hand: '三张牌都在桌上。过手只决定怎么看，不改变已经抽出的牌。',
 };
 
 export function composeSceneClose(input: SceneCloseInput): {
@@ -55,7 +55,7 @@ export function composeSceneClose(input: SceneCloseInput): {
       SCENE_LINE[input.sceneId],
       pauseSentence('过去', pastName, input.past, pastAction),
       pauseSentence('现在', presentName, input.present, presentAction),
-      futureSentence(input.past.kind, input.present.kind, futureName),
+      futureSentence(futureName),
     ],
     kept,
   };
@@ -102,18 +102,16 @@ function pauseSentence(
   when: '过去' | '现在',
   name: string,
   resolution: PauseResolution,
-  action: { labelZh: string } | null,
+  action: { sentenceZh: string } | null,
 ): string {
+  const card = `${when}这张是${name}。`;
   if (resolution.kind === 'missing') {
-    return `${when}这一停，${name}前，这一停没有写好的步骤。`;
+    return `${card}这一停没有单独写好的步骤。`;
   }
-  if (resolution.kind === 'skip') {
-    return `${when}这一停，${name}前，你没有点选。`;
-  }
+  if (resolution.kind === 'skip') return card;
   if (!action) throw new Error(`pause offer missing`);
   const custom = customText(resolution);
-  if (!custom) return `${when}这一停，${name}前，你点了「${action.labelZh}」。`;
-  return `${when}这一停，${name}前，你点了「${action.labelZh}」，并改成自己的话：「${custom}」。`;
+  return `${card}${custom || action.sentenceZh}`;
 }
 
 function keptText(
@@ -127,18 +125,6 @@ function keptText(
   return action.sentenceZh;
 }
 
-function futureSentence(past: PauseResolution['kind'], present: PauseResolution['kind'], futureName: string): string {
-  if (past === 'missing' || present === 'missing') {
-    return `写好的步骤没有齐，这张${futureName}是已经进到视野里的画面。`;
-  }
-  if (past === 'action' && present === 'action') {
-    return `若照你刚才点的两步再走，这张${futureName}是已经进到视野里的画面。`;
-  }
-  if (past === 'action') {
-    return `若只沿你在过去点的那一步走，这张${futureName}是已经进到视野里的画面。`;
-  }
-  if (present === 'action') {
-    return `若只沿你在现在点的那一步走，这张${futureName}是已经进到视野里的画面。`;
-  }
-  return `你没有在这两处停留，这张${futureName}是已经进到视野里的画面。`;
+function futureSentence(futureName: string): string {
+  return `接下来是${futureName}。这张在回应之前就已经抽出，刚才的选择不改变它。`;
 }
