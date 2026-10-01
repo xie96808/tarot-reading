@@ -179,8 +179,9 @@ export function PauseMeaning({
     >
       {missing ? <p className={styles.body}>{COPY.pauseMissing}</p> : null}
       <h2 id={titleId} ref={titleRef} className={styles.prompt} tabIndex={0}>
-        {COPY.pauseMeaningLead}
+        {COPY.pauseMeaningTitle}
       </h2>
+      <p className={styles.privacy}>{COPY.pauseMeaningLead}</p>
       <p className={styles.body}>{frameZh}</p>
       <p className={styles.body}>{meaning}</p>
     </section>

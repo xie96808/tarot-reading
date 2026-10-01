@@ -14,7 +14,6 @@ type SceneCloseViewProps = {
   kept: readonly KeptLine[];
   keptIndex: 1 | 2 | null;
   selectable: boolean;
-  skipped: readonly KeptLine[];
   onKeep?: (index: 1 | 2) => void;
 };
 
@@ -23,12 +22,10 @@ export function SceneCloseView({
   kept,
   keptIndex,
   selectable,
-  skipped,
   onKeep,
 }: SceneCloseViewProps) {
   const titleId = useId();
   const chosen = kept.find((item) => item.index === keptIndex) ?? null;
-  const mustChoose = selectable && kept.length === 2 && keptIndex === null;
   const onlyOne = selectable && kept.length === 1;
   return (
     <section role="region" className={styles.panel} data-scene-close aria-labelledby={titleId}>
@@ -40,13 +37,6 @@ export function SceneCloseView({
           <li key={index}>{sentence}</li>
         ))}
       </ol>
-      {selectable && skipped.length > 0
-        ? skipped.map((line) => (
-            <p key={line.index} className={styles.static} data-pause-skipped={line.index}>
-              {line.text}
-            </p>
-          ))
-        : null}
       {onlyOne && chosen ? (
         <div data-kept-static>
           <p className={styles.ask}>{COPY.keepOnly}</p>
@@ -69,7 +59,6 @@ export function SceneCloseView({
           ))}
         </fieldset>
       ) : null}
-      {mustChoose ? <p className={styles.ask}>{COPY.keepRequired}</p> : null}
       {!selectable && chosen ? <p data-kept-static>{chosen.text}</p> : null}
     </section>
   );

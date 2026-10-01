@@ -48,7 +48,7 @@ test('copy-share button generates a working link and persists device history', a
   await page.getByRole('button', { name: '让牌落在桌上' }).click();
   const revealNext = page.locator('main').locator('[data-reveal="primary"]');
   await expect(revealNext).toBeVisible({ timeout: 8_000 });
-  const skip = page.getByRole('button', { name: '先不选，看这张牌' });
+  const skip = page.getByRole('button', { name: '先不聊这个，看这张牌' });
   await revealNext.click();
   await expect(skip).toBeEnabled();
   await skip.click();
@@ -58,7 +58,7 @@ test('copy-share button generates a working link and persists device history', a
   await revealNext.click();
   await expect(page.getByRole('heading', { name: '整阵线索' })).toBeVisible();
   await page.getByRole('checkbox', { name: '保存到这台设备' }).check();
-  await page.getByRole('button', { name: '写一句，留给自己' }).click();
+  await page.getByRole('button', { name: '结束这一局' }).click();
   await page.getByRole('button', { name: '复制本局链接' }).click();
   const shareBox = page.getByRole('textbox');
   await expect(shareBox).toHaveValue(/\/r\/1\./, { timeout: 5_000 });
