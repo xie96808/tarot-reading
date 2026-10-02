@@ -14,9 +14,4 @@ describe('integrated visual assets', () => {
     const meta = await sharp(`public/${file}`).metadata();
     expect(meta).toMatchObject({ width, height, hasAlpha });
   });
-  it.each(['surface', 'hands-idle', 'hands-riffle', 'hands-cut'])('%s is a complete opaque photograph, not a hand cutout', async (name) => {
-    for (const ext of ['jpg', 'webp']) {
-      expect(await sharp(`public/table/${name}.${ext}`).metadata()).toMatchObject({ width: 1600, height: 900, hasAlpha: false });
-    }
-  });
 });

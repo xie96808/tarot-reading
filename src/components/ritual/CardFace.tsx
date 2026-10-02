@@ -37,22 +37,19 @@ export function CardFace({ urls, sizes, alt }: CardFaceProps) {
   return (
     <div className={styles.frame}>
     {!loaded ? <span className={styles.loading} role="status">牌面载入中…</span> : null}
-    <picture>
-      <source type="image/webp" srcSet={sources.webpSrcSet} sizes={sizes} />
-      <img
-        key={nonce}
-        className={`${styles.face} ${loaded ? styles.loaded : ''}`}
-        onLoad={() => setLoaded(true)}
-        src={sources.jpegSrc}
-        srcSet={sources.jpegSrcSet}
-        sizes={sizes}
-        alt={alt}
-        width={800}
-        height={1280}
-        onError={() => setFailed(true)}
-        draggable={false}
-      />
-    </picture>
+    <img
+      key={nonce}
+      className={`${styles.face} ${loaded ? styles.loaded : ''}`}
+      onLoad={() => setLoaded(true)}
+      src={sources.webpSrc}
+      srcSet={sources.webpSrcSet}
+      sizes={sizes}
+      alt={alt}
+      width={800}
+      height={1280}
+      onError={() => setFailed(true)}
+      draggable={false}
+    />
     </div>
   );
 }

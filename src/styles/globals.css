@@ -1,9 +1,7 @@
 /* style.css also pulls Mono, GB, and Mono GB. The page only uses LXGW WenKai Screen. */
 @import 'lxgw-wenkai-screen-web/lxgwwenkaiscreen/result.css';
-@import '@fontsource/noto-serif-sc/chinese-simplified-400.css';
-@import '@fontsource/noto-serif-sc/chinese-simplified-500.css';
-@import '@fontsource/cormorant-garamond/500.css';
-@import '@fontsource/cormorant-garamond/600.css';
+/* Fontsource CSS lists a woff beside every woff2. Browsers use woff2; the woff copies were only release weight. */
+@import './fonts.css';
 @import './tokens.css';
 
 *,

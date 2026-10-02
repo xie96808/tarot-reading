@@ -6,9 +6,9 @@ const oneCard = {
       cardId: '00_the_fool',
       digest: 'abc',
       variants: {
-        320: { webp: '/a.webp', jpeg: '/a.jpg' },
-        480: { webp: '/b.webp', jpeg: '/b.jpg' },
-        800: { webp: '/c.webp', jpeg: '/c.jpg' },
+        320: { webp: '/a.webp' },
+        480: { webp: '/b.webp' },
+        800: { webp: '/c.webp' },
       },
     },
   ],

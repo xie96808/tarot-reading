@@ -85,20 +85,13 @@ async function main() {
     const variants = {};
     for (const width of WIDTHS) {
       const webpName = `${width}.webp`;
-      const jpgName = `${width}.jpg`;
       await image
         .clone()
         .resize({ width })
         .webp({ quality: 78 })
         .toFile(path.join(dest, webpName));
-      await image
-        .clone()
-        .resize({ width })
-        .jpeg({ quality: 82, mozjpeg: true })
-        .toFile(path.join(dest, jpgName));
       variants[width] = {
         webp: `/cards/${DECK_VERSION}/${cardId}/${digest}/${webpName}`,
-        jpeg: `/cards/${DECK_VERSION}/${cardId}/${digest}/${jpgName}`,
       };
     }
     cards.push({
