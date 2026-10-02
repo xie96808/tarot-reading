@@ -5,7 +5,7 @@ import type { CardId } from '@/data/card-ids';
 type Manifest = {
   cards: Array<{
     cardId: string;
-    variants: Record<string, { webp: string; jpeg: string }>;
+    variants: Record<string, { webp: string }>;
   }>;
 };
 
@@ -32,23 +32,17 @@ export function CardFaceStatic({
 }) {
   const variants = urlsFor(cardId);
   if (!variants) return null;
+  const srcSet = `${variants[320].webp} 320w, ${variants[480].webp} 480w, ${variants[800].webp} 800w`;
   return (
-    <picture>
-      <source
-        type="image/webp"
-        srcSet={`${variants[320].webp} 320w, ${variants[480].webp} 480w, ${variants[800].webp} 800w`}
-        sizes={sizes}
-      />
-      <img
-        src={variants[320].jpeg}
-        srcSet={`${variants[320].jpeg} 320w, ${variants[480].jpeg} 480w, ${variants[800].jpeg} 800w`}
-        sizes={sizes}
-        width={800}
-        height={1280}
-        alt={alt}
-        loading="lazy"
-        style={{ width, height: 'auto' }}
-      />
-    </picture>
+    <img
+      src={variants[480].webp}
+      srcSet={srcSet}
+      sizes={sizes}
+      width={800}
+      height={1280}
+      alt={alt}
+      loading="lazy"
+      style={{ width, height: 'auto' }}
+    />
   );
 }
