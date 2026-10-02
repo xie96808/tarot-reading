@@ -31,8 +31,10 @@ ssh "${ssh_args[@]}" "$SYNC_USER@$SYNC_HOST" "prepare $GITHUB_SHA"
 attempts=3
 for attempt in $(seq 1 "$attempts"); do
   printf 'rsync attempt %s/%s\n' "$attempt" "$attempts"
-  if rsync -rlt --delay-updates --timeout=120 --info=progress2 \
+  started=$(date +%s)
+  if rsync -rlt --partial --delay-updates --timeout=120 --info=progress2 \
       "$work/upload/" "$SYNC_USER@$SYNC_HOST:$GITHUB_SHA/"; then
+    printf 'rsync finished in %ss\n' "$(( $(date +%s) - started ))"
     break
   fi
   if [[ "$attempt" -eq "$attempts" ]]; then
