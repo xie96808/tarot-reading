@@ -15,9 +15,7 @@ export function Footer() {
             <a href={COPY.icpHref} rel="noreferrer">
               {COPY.icp}
             </a>
-          ) : (
-            <span>备案号待填</span>
-          )}
+          ) : null}
         </span>
       </p>
     </footer>

@@ -19,6 +19,7 @@
   z-index: -2;
   border-radius: 46%;
   border: 1px solid #c4a35a45;
+  overflow: hidden;
   background:
     repeating-linear-gradient(6deg, #ffffff03 0 1px, transparent 1px 3px),
     repeating-linear-gradient(94deg, #00000010 0 1px, transparent 1px 4px),
@@ -26,12 +27,22 @@
   box-shadow: 0 12px 20px #0008, inset 0 0 0 7px #09191055, inset 0 0 35px #0007;
   pointer-events: none;
 }
+.felt { position: absolute; inset: 0; display: block; }
+.felt img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  border-radius: inherit;
+}
+
 .light { position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
   background: radial-gradient(ellipse at 12% 0, #ffd68526, transparent 58%);
   animation: candlelight 5s ease-in-out infinite alternate;
 }
 .inscription { position: absolute; top: 8%; left: 0; right: 0; text-align: center; font-size: 12px; letter-spacing: .26em; color: #decfa486; pointer-events: none; }
-.content { position: relative; min-width: 0; width: 100%; }
+.content { position: relative; min-width: 0; width: 100%; z-index: 1; }
 .play .content { position: absolute; inset: 17% 8% 12%; width: 84%; }
 .spread { min-height: 560px; padding: 100px 12% 64px; }
 .spread .mat { inset: 28px 4%; border-radius: 110px; }

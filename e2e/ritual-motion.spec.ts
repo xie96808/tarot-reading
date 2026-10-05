@@ -4,7 +4,7 @@ for (const width of [390, 1440]) {
   test(`visible motion through shuffle, cut, deal and reveal at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1000 });
     const missing: string[] = [];
-    page.on('response', response => { if (response.status() >= 400 && /\/(table|cards|ui)\//.test(response.url())) missing.push(response.url()); });
+    page.on('response', response => { if (response.status() >= 400 && /\/(table|cards|ui|hands)\//.test(response.url())) missing.push(response.url()); });
     await page.goto('/read');
     await page.getByRole('button', { name: '我准备好了', exact: true }).click();
     await page.getByRole('button', { name: '这次不设问题', exact: true }).click();
@@ -14,6 +14,8 @@ for (const width of [390, 1440]) {
     const card = page.locator('[data-shuffle-card]').last();
     await expect(card).toBeVisible();
     await expect(page.locator('[data-shuffle-card]')).toHaveCount(16);
+    await expect(page.locator('[data-ritual-hands="shuffle"]')).toBeVisible();
+    await expect(page.locator('[data-felt-mat]')).toBeVisible();
     await page.keyboard.down('Space');
     await expect(page.locator('[data-shuffle-phase]')).toHaveAttribute('data-shuffle-phase', 'holding');
     const before = await card.evaluate(el => getComputedStyle(el).transform);
@@ -29,6 +31,7 @@ for (const width of [390, 1440]) {
     await page.getByRole('slider').focus();
     await page.keyboard.press('End');
     await expect(page.locator('[data-cut-index]')).toHaveAttribute('data-cut-index', '77');
+    await expect(page.locator('[data-ritual-hands="cut"]')).toBeVisible();
     await page.waitForTimeout(500);
     expect(await packet.evaluate(el => getComputedStyle(el).transform)).not.toBe(cutBefore);
     await scene.screenshot({ path: testInfo.outputPath('cut.png') });

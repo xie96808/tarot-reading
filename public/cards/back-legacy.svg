@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1280" viewBox="0 0 800 1280" role="img" aria-label="烛下塔罗牌背">
+  <title>烛下塔罗牌背</title>
+  <defs>
+    <pattern id="hatch" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M0 28 L28 0" stroke="#c4a35a" stroke-width="0.6" opacity="0.11"/>
+      <path d="M14 28 L28 14" stroke="#c4a35a" stroke-width="0.6" opacity="0.07"/>
+      <path d="M0 14 L14 0" stroke="#c4a35a" stroke-width="0.6" opacity="0.07"/>
+    </pattern>
+  </defs>
+  <!-- cream field; 180-degree rotationally symmetric geometry -->
+  <rect width="800" height="1280" fill="#F4ECD5"/>
+  <rect x="28" y="28" width="744" height="1224" fill="none" stroke="#191202" stroke-width="3"/>
+  <rect x="40" y="40" width="720" height="1200" fill="#14110e" stroke="#191202" stroke-width="2"/>
+  <rect x="40" y="40" width="720" height="1200" fill="url(#hatch)"/>
+  <g fill="none" stroke="#c4a35a" stroke-width="1.4" transform="translate(400 640)">
+    <circle r="168" opacity="0.95"/>
+    <circle r="152" opacity="0.45"/>
+    <circle r="48" opacity="0.9"/>
+    <g opacity="0.92">
+      <path d="M0 -118 C18 -86 18 -54 0 -36 C-18 -54 -18 -86 0 -118Z"/>
+      <path d="M0 118 C18 86 18 54 0 36 C-18 54 -18 86 0 118Z"/>
+      <path d="M118 0 C86 18 54 18 36 0 C54 -18 86 -18 118 0Z"/>
+      <path d="M-118 0 C-86 18 -54 18 -36 0 C-54 -18 -86 -18 -118 0Z"/>
+    </g>
+    <g opacity="0.7" transform="rotate(45)">
+      <path d="M0 -96 C12 -72 12 -48 0 -32 C-12 -48 -12 -72 0 -96Z"/>
+      <path d="M0 96 C12 72 12 48 0 32 C-12 48 -12 72 0 96Z"/>
+      <path d="M96 0 C72 12 48 12 32 0 C48 -12 72 -12 96 0Z"/>
+      <path d="M-96 0 C-72 12 -48 12 -32 0 C-48 -12 -72 -12 -96 0Z"/>
+    </g>
+    <rect x="-10" y="-10" width="20" height="20" transform="rotate(45)" fill="#c4a35a" stroke="none" opacity="0.85"/>
+  </g>
+  <rect x="58" y="58" width="684" height="1164" fill="none" stroke="#c4a35a" stroke-width="0.8" opacity="0.35"/>
+</svg>

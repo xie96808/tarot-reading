@@ -1,26 +1,29 @@
 export const MOTION = {
   enterMs: 320,
   shuffleCards: 16,
-  shuffleLoopMs: 1600,
+  shuffleLoopMs: 1500,
   shuffleMinCommitMs: 1900,
-  cutMs: 500,
+  shuffleFrameMs: 420,
+  cutMs: 560,
   cutVisibleMax: 10,
-  dealFlightMs: 620,
-  dealGapThreeMs: 180,
-  dealGapCelticMs: 120,
-  dealCapMs: 1800,
+  dealFlightMs: 720,
+  dealGapThreeMs: 190,
+  dealGapCelticMs: 110,
+  dealCapMs: 1900,
+  dealFanMs: 280,
   flipMs: 640,
-  uprightPauseMs: 240,
+  uprightPauseMs: 220,
   uprightMs: 780,
   readFadeMs: 420,
-  seamLeadMs: 200,
-  seamMs: 280,
-  sceneCompleteMs: 280,
-  palmMs: 480,
+  seamLeadMs: 80,
+  seamMs: 260,
+  sceneCompleteMs: 260,
+  palmMs: 520,
   settleMs: 360,
   seamPx: 12,
   partialTurnDeg: 126,
   palmShiftPct: 12,
+  revealPressMs: 120,
 } as const;
 
 export function prefersReducedMotion(): boolean {
@@ -34,15 +37,16 @@ export function dealGapMs(cardCount: number): number {
   return cardCount >= 10 ? MOTION.dealGapCelticMs : MOTION.dealGapThreeMs;
 }
 
-export function dealDelayMs(index: number, cardCount: number): number {
+export function dealDelayMs(index: number, cardCount: number, reduced = false): number {
   if (index < 0) return 0;
-  return index * dealGapMs(cardCount);
+  const fan = reduced ? 0 : MOTION.dealFanMs;
+  return fan + index * dealGapMs(cardCount);
 }
 
 export function dealDurationMs(cardCount: number, reduced: boolean): number {
   if (reduced) return 0;
   const n = Math.max(1, cardCount);
-  const total = MOTION.dealFlightMs + dealGapMs(n) * (n - 1) + 80;
+  const total = MOTION.dealFanMs + MOTION.dealFlightMs + dealGapMs(n) * (n - 1) + 80;
   return Math.min(total, MOTION.dealCapMs);
 }
 

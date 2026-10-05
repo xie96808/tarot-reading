@@ -105,6 +105,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   const [shownMeaning, setShownMeaning] = useState<string | null>(null);
   const [snapSession, setSnapSession] = useState<string | null>(null);
   const [restoredRevealed, setRestoredRevealed] = useState<ReadonlySet<string>>(() => new Set());
+  const [visibleRevealCount, setVisibleRevealCount] = useState(0);
 
   const dispatch = useCallback((event: Parameters<typeof reduce>[1]) => {
     setState((current) => reduce(current, event));
@@ -216,6 +217,18 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     const timer = window.setTimeout(() => dispatch({ type: 'DEAL_DONE' }), ms);
     return () => window.clearTimeout(timer);
   }, [state, dispatch]);
+
+  const revealTargetCount =
+    (state.stage === 'reveal' || state.stage === 'read') && 'revealed' in state ? state.revealed.length : 0;
+  if (revealTargetCount < visibleRevealCount) {
+    setVisibleRevealCount(revealTargetCount);
+  }
+  useEffect(() => {
+    if (revealTargetCount <= visibleRevealCount) return;
+    const delay = reducedMotion || document.hidden ? 0 : MOTION.flipMs;
+    const timer = window.setTimeout(() => setVisibleRevealCount(revealTargetCount), delay);
+    return () => window.clearTimeout(timer);
+  }, [revealTargetCount, visibleRevealCount, reducedMotion]);
 
   useEffect(() => {
     if (state.stage !== 'cut' || cutCommitSession !== state.sessionId) return;
@@ -354,6 +367,9 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     const title = document.getElementById('stage-title');
     if (!title) return;
     title.focus({ preventScroll: true });
+    // Keep shuffle → cut → deal on the same viewport; only scroll for major chapter changes.
+    const keepTable = state.stage === 'cut' || state.stage === 'deal' || state.stage === 'reveal';
+    if (keepTable) return;
     title.scrollIntoView({
       block: 'start',
       inline: 'nearest',
@@ -379,7 +395,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
       </h2>
       <p className="visually-hidden" aria-live="polite">
         {state.stage === 'reveal' && 'revealed' in state
-          ? `已翻开 ${state.revealed.length} / ${state.draws.length}`
+          ? `已翻开 ${visibleRevealCount} / ${state.draws.length}`
           : chapter(state.stage)}
       </p>
       {faceLoadError ? <div className={styles.warn} role="alert">
@@ -671,21 +687,26 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
           >
             <ShuffleTable phase={state.shufflePhase} paused={pageHidden} reduced={reducedMotion} />
           </TableScene>
-          <p className={styles.muted}>{COPY.tablePhotoCaption}</p>
         </section>
       ) : null}
 
       {state.stage === 'cut' ? (
         <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`}>
           <h1>{COPY.cutTitle}</h1>
-          <p>
-            {COPY.shuffleSealed} · {state.commitShort}
-          </p>
-          <details>
-            <summary>{COPY.sealedFingerprint}</summary>
-            <code style={{ fontSize: 13, wordBreak: 'break-all' }}>{state.commitFull}</code>
-            <p className={styles.muted}>只检查本标签页牌序是否自洽，不是公证。</p>
-          </details>
+          <p>{COPY.shuffleSealed}</p>
+          <TableScene
+            paused={pageHidden}
+            hand={tableHandMode({ stage: 'cut', reduced: reducedMotion })}
+            label={COPY.cutTitle}
+          >
+            <CutTable
+              cutIndex={state.cutIndex}
+              gathering={cutCommitSession === state.sessionId}
+              reduced={reducedMotion}
+              disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
+              onCutChange={(cutIndex) => dispatch({ type: 'SET_CUT', cutIndex })}
+            />
+          </TableScene>
           <label>
             {COPY.cutHint(state.cutIndex)}
             <input
@@ -699,6 +720,9 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               onChange={(event) => dispatch({ type: 'SET_CUT', cutIndex: Number(event.target.value) })}
             />
           </label>
+          <p data-cut-top={cutProportion(state.cutIndex)?.top} data-cut-bottom={cutProportion(state.cutIndex)?.bottom}>
+            上方 {state.cutIndex} 张 · 下方 {78 - state.cutIndex} 张
+          </p>
           <button
             type="button"
             className={styles.ghost}
@@ -724,17 +748,12 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
           >
             {COPY.cutConfirm}
           </button>
-          <p data-cut-top={cutProportion(state.cutIndex)?.top} data-cut-bottom={cutProportion(state.cutIndex)?.bottom}>
-            上方 {state.cutIndex} 张 · 下方 {78 - state.cutIndex} 张
-          </p>
-          <TableScene
-            paused={pageHidden}
-            hand={tableHandMode({ stage: 'cut', reduced: reducedMotion })}
-            label={COPY.cutTitle}
-          >
-            <CutTable cutIndex={state.cutIndex} gathering={cutCommitSession === state.sessionId} />
-          </TableScene>
-          <p className={styles.muted}>{COPY.tablePhotoCaption}</p>
+          <details>
+            <summary>{COPY.sealedFingerprint}</summary>
+            <p className={styles.muted}>{state.commitShort}</p>
+            <code style={{ fontSize: 13, wordBreak: 'break-all' }}>{state.commitFull}</code>
+            <p className={styles.muted}>只检查本标签页牌序是否自洽，不是公证。</p>
+          </details>
         </section>
       ) : null}
 
@@ -802,6 +821,9 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
           ) : null}
           {state.stage === 'reveal' ? (
             <div className={styles.center}>
+              <p className={styles.revealProgress} aria-hidden="true">
+                {'revealed' in state ? `已翻开 ${visibleRevealCount} / ${state.draws.length}` : null}
+              </p>
               <p className={styles.muted}>{COPY.reversedHint}</p>
               <div className={styles.revealBar}>
                 {state.revealed.length < state.draws.length ? (

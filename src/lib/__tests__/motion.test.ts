@@ -11,18 +11,19 @@ import {
 
 describe('deal timing', () => {
   it('uses flight + stagger and stays under the celtic cap', () => {
-    expect(dealDurationMs(1, false)).toBe(MOTION.dealFlightMs + 80);
-    expect(dealDurationMs(3, false)).toBe(MOTION.dealFlightMs + MOTION.dealGapThreeMs * 2 + 80);
-    expect(dealDurationMs(10, false)).toBe(MOTION.dealFlightMs + MOTION.dealGapCelticMs * 9 + 80);
-    expect(MOTION.dealCapMs).toBeLessThanOrEqual(1800);
+    expect(dealDurationMs(1, false)).toBe(MOTION.dealFanMs + MOTION.dealFlightMs + 80);
+    expect(dealDurationMs(3, false)).toBe(MOTION.dealFanMs + MOTION.dealFlightMs + MOTION.dealGapThreeMs * 2 + 80);
+    expect(dealDurationMs(10, false)).toBe(Math.min(MOTION.dealFanMs + MOTION.dealFlightMs + MOTION.dealGapCelticMs * 9 + 80, MOTION.dealCapMs));
+    expect(MOTION.dealCapMs).toBeLessThanOrEqual(1900);
     expect(dealDurationMs(10, false)).toBeLessThanOrEqual(MOTION.dealCapMs);
     expect(dealDurationMs(10, true)).toBe(0);
   });
 
-  it('staggers from the first card at delay 0', () => {
-    expect(dealDelayMs(0, 3)).toBe(0);
-    expect(dealDelayMs(2, 3)).toBe(MOTION.dealGapThreeMs * 2);
-    expect(dealDelayMs(9, 10)).toBe(MOTION.dealGapCelticMs * 9);
+  it('staggers after a short fan lead, first card at fan Ms', () => {
+    expect(dealDelayMs(0, 3)).toBe(MOTION.dealFanMs);
+    expect(dealDelayMs(2, 3)).toBe(MOTION.dealFanMs + MOTION.dealGapThreeMs * 2);
+    expect(dealDelayMs(9, 10)).toBe(MOTION.dealFanMs + MOTION.dealGapCelticMs * 9);
+    expect(dealDelayMs(0, 3, true)).toBe(0);
   });
 });
 
