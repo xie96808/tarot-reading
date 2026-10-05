@@ -112,26 +112,31 @@
 }
 
 .dealing {
-  animation: dealIn var(--deal-ms, 980ms) cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: dealIn var(--deal-ms, 1200ms) cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--deal-delay, 0ms);
 }
 
 @keyframes dealIn {
-  from {
+  0% {
     opacity: 0;
-    transform: translate3d(var(--deal-x, 0px), var(--deal-y, -180px), 0) rotate(-16deg) scale(0.48);
-    filter: brightness(0.65);
+    transform: translate3d(var(--deal-x, 0px), var(--deal-y, -220px), 0) rotate(-22deg) scale(0.42);
+    filter: brightness(0.55);
+  }
+  18% {
+    opacity: 1;
+    transform: translate3d(calc(var(--deal-x, 0px) * 0.72), calc(var(--deal-y, -220px) * 0.72), 0) rotate(-10deg) scale(0.62);
   }
   55% {
     opacity: 1;
-    transform: translate3d(calc(var(--deal-x, 0px) * 0.18), calc(var(--deal-y, -180px) * 0.12), 0) rotate(4deg) scale(1.04);
+    transform: translate3d(calc(var(--deal-x, 0px) * 0.22), calc(var(--deal-y, -220px) * 0.18), 0) rotate(5deg) scale(1.05);
+    filter: brightness(0.95);
   }
   82% {
     opacity: 1;
-    transform: translate3d(0, 8px, 0) rotate(1.5deg) scale(1.02);
+    transform: translate3d(0, 10px, 0) rotate(1.5deg) scale(1.02);
     filter: none;
   }
-  to {
+  100% {
     opacity: 1;
     transform: none;
     filter: none;
@@ -203,9 +208,24 @@
   pointer-events: none;
   transform: translateX(-50%);
   display: block;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 58%,
+    rgba(0, 0, 0, 0.5) 78%,
+    rgba(0, 0, 0, 0.12) 90%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 58%,
+    rgba(0, 0, 0, 0.5) 78%,
+    rgba(0, 0, 0, 0.12) 90%,
+    transparent 100%
+  );
 }
+
 
 .flip {
   z-index: 1;

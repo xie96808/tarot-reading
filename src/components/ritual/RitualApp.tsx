@@ -21,6 +21,7 @@ import { clearSession, loadSession, pushHistory, saveSession, subscribeStorageSt
 import { loadFaceIndex, pictureSources, subscribeFaceIndex, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
+import { faceUpRevealCount } from '@/lib/face-up-count';
 import { MOTION, cutProportion, dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
 import { tableHandMode, type CutHandFrame, type ShuffleHandFrame } from '@/lib/table-hands';
 import { CardBack } from './CardBack';
@@ -105,7 +106,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   const [shownMeaning, setShownMeaning] = useState<string | null>(null);
   const [snapSession, setSnapSession] = useState<string | null>(null);
   const [restoredRevealed, setRestoredRevealed] = useState<ReadonlySet<string>>(() => new Set());
-  const [visibleRevealCount, setVisibleRevealCount] = useState(0);
   const [shuffleHandFrameState, setShuffleHandFrameState] = useState<ShuffleHandFrame | null>(null);
   const [cutHandFrameState, setCutHandFrameState] = useState<CutHandFrame | null>(null);
 
@@ -220,17 +220,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     return () => window.clearTimeout(timer);
   }, [state, dispatch]);
 
-  // Count face-up cards: sealed reveals + the card currently open in 推门/过手 pause.
-  const revealTargetCount = (() => {
-    if ((state.stage !== 'reveal' && state.stage !== 'read') || !('revealed' in state)) return 0;
-    const ids = new Set(state.revealed);
-    if (state.stage === 'reveal' && state.pause) ids.add(state.pause.positionId);
-    return ids.size;
-  })();
-  if (revealTargetCount !== visibleRevealCount) {
-    setVisibleRevealCount(revealTargetCount);
-  }
-
   useEffect(() => {
     if (state.stage !== 'cut' || cutCommitSession !== state.sessionId) return;
     const timer = window.setTimeout(() => {
@@ -311,6 +300,18 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               Boolean(openedAtResume?.has(positionId)),
           ]),
         );
+  const faceUpCount =
+    'revealed' in state
+      ? faceUpRevealCount(
+          {
+            stage: state.stage,
+            revealed: state.revealed,
+            pause: 'pause' in state ? state.pause : null,
+          },
+          sceneVisuals,
+        )
+      : 0;
+
   const pauseDraw = pause && 'draws' in state ? state.draws.find((draw) => draw.positionId === pause.positionId) : undefined;
   const pauseFaceReady = !pauseDraw || faces.has(pauseDraw.cardId);
   const choicesReady = Boolean(pauseKey) && pauseFaceReady && (reducedMotion || pauseRestored || actionsReady);
@@ -368,17 +369,26 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     const title = document.getElementById('stage-title');
     if (title) title.focus({ preventScroll: true });
     const ritual = state.stage === 'shuffle' || state.stage === 'cut' || state.stage === 'deal' || state.stage === 'reveal';
-    const target = ritual
-      ? (document.querySelector('[data-table-scene]') as HTMLElement | null)
-      : title;
-    if (!target) return;
-    // Never mid-drag: cut table owns pointer; this only runs on stage enter.
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    target.scrollIntoView({
-      block: ritual ? 'center' : 'start',
-      inline: 'nearest',
-      behavior: reduce ? 'auto' : 'smooth',
-    });
+    const scrollRitual = () => {
+      const stage = document.querySelector('[data-ritual-stage]') as HTMLElement | null;
+      const table = document.querySelector('[data-table-scene]') as HTMLElement | null;
+      const target = ritual ? (stage ?? table) : title;
+      if (!target) return;
+      target.scrollIntoView({
+        block: ritual ? 'start' : 'start',
+        inline: 'nearest',
+        behavior: reduce ? 'auto' : 'smooth',
+      });
+      // Second pass after layout (spread/deal geometry) so cards are not clipped.
+      if (ritual && table) {
+        window.setTimeout(() => {
+          table.scrollIntoView({ block: 'center', inline: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+        }, reduce ? 0 : 80);
+      }
+    };
+    const frame = window.requestAnimationFrame(() => scrollRitual());
+    return () => window.cancelAnimationFrame(frame);
   }, [state.stage]);
 
   useEffect(() => {
@@ -399,7 +409,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
       </h2>
       <p className="visually-hidden" aria-live="polite">
         {state.stage === 'reveal' && 'revealed' in state
-          ? `已翻开 ${visibleRevealCount} / ${state.draws.length}`
+          ? `已翻开 ${faceUpCount} / ${state.draws.length}`
           : chapter(state.stage)}
       </p>
       {faceLoadError ? <div className={styles.warn} role="alert">
@@ -641,25 +651,9 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
       ) : null}
 
       {state.stage === 'shuffle' ? (
-        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`}>
+        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`} data-ritual-stage="shuffle">
           <h1>{COPY.shuffleTitle}</h1>
           <p>{state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}</p>
-          <button
-            type="button"
-            className={styles.primary}
-            disabled={state.shufflePhase === 'committing'}
-            onClick={() => {
-              samples.current = [];
-              dispatch({ type: 'AUTO_SHUFFLE', operationId: newOperationId() });
-            }}
-          >
-            {COPY.shuffleAuto}
-          </button>
-          {state.shufflePhase === 'idle' ? (
-            <button type="button" className={styles.ghost} onClick={() => dispatch({ type: 'BACK' })}>
-              {COPY.backToSpread}
-            </button>
-          ) : null}
           <TableScene
             paused={pageHidden}
             hand={tableHandMode({
@@ -699,11 +693,27 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               onHandFrame={setShuffleHandFrameState}
             />
           </TableScene>
+          <button
+            type="button"
+            className={styles.primary}
+            disabled={state.shufflePhase === 'committing'}
+            onClick={() => {
+              samples.current = [];
+              dispatch({ type: 'AUTO_SHUFFLE', operationId: newOperationId() });
+            }}
+          >
+            {COPY.shuffleAuto}
+          </button>
+          {state.shufflePhase === 'idle' ? (
+            <button type="button" className={styles.ghost} onClick={() => dispatch({ type: 'BACK' })}>
+              {COPY.backToSpread}
+            </button>
+          ) : null}
         </section>
       ) : null}
 
       {state.stage === 'cut' ? (
-        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`}>
+        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`} data-ritual-stage="cut">
           <h1>{COPY.cutTitle}</h1>
           <p>{COPY.shuffleSealed}</p>
           <TableScene
@@ -771,7 +781,10 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
       ) : null}
 
       {state.stage === 'deal' || state.stage === 'reveal' || state.stage === 'read' ? (
-        <section className={`${styles.stage} ${styles.tableStage}`}>
+        <section
+          className={`${styles.stage} ${styles.tableStage}`}
+          data-ritual-stage={state.stage === 'read' ? 'read' : state.stage}
+        >
           {state.stage === 'deal' ? <p className={styles.dealHint}>牌正在落到桌上</p> : null}
           <div className={state.stage === 'read' && state.view === 'page' ? styles.tableParked : undefined}>
             <TableScene
@@ -834,8 +847,8 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
           ) : null}
           {state.stage === 'reveal' ? (
             <div className={styles.center}>
-              <p className={styles.revealProgress} aria-hidden="true">
-                {'revealed' in state ? `已翻开 ${visibleRevealCount} / ${state.draws.length}` : null}
+              <p className={styles.revealProgress} data-reveal-count={faceUpCount} aria-live="polite">
+                {`已翻开 ${faceUpCount} / ${state.draws.length}`}
               </p>
               <p className={styles.muted}>{COPY.reversedHint}</p>
               <div className={styles.revealBar}>

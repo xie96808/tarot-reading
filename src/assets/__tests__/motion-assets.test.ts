@@ -55,8 +55,9 @@ describe('layered ritual assets and timing', () => {
     expect(MOTION.shuffleMinCommitMs).toBeGreaterThanOrEqual(1700 + 7 * 12);
     expect(dealDurationMs(10, false)).toBeGreaterThanOrEqual(MOTION.dealFlightMs + 9 * MOTION.dealGapCelticMs);
     expect(MOTION.cutMs).toBeGreaterThanOrEqual(440);
-    expect(MOTION.dealFlightMs).toBeGreaterThanOrEqual(900);
-    expect(MOTION.dealCapMs).toBeLessThanOrEqual(2600);
-    expect(MOTION.shuffleFrameMs).toBeGreaterThanOrEqual(400);
+    expect(MOTION.dealFlightMs).toBeGreaterThanOrEqual(1200);
+    expect(MOTION.dealCapMs).toBeLessThanOrEqual(3200);
+    expect(MOTION.shuffleFrameMs).toBeGreaterThanOrEqual(700);
+    expect(MOTION.shuffleMinCommitMs).toBeGreaterThanOrEqual(2500);
   });
 });

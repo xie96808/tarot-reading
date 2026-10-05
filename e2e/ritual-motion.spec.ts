@@ -82,8 +82,9 @@ for (const width of [390, 1440]) {
     await next.click();
     await expect(page.locator('[data-card-visual]:visible [class*="inner"][class*="revealed"]')).toHaveCount(0);
     await expect(page.locator('[data-card-visual]:visible [class*="inner"][class*="partial"]').first()).toBeVisible();
-    // Counter counts as soon as face is in view (partial).
-    await expect(page.locator('.revealProgress, [class*="revealProgress"]').first()).toContainText('1 /');
+    // Counter counts as soon as face is in view (partial / palm).
+    await expect(page.locator('[data-reveal-count]')).toHaveAttribute('data-reveal-count', '1');
+    await expect(page.locator('[data-reveal-count]')).toContainText('已翻开 1 / 3');
     const skip = page.getByRole('button', { name: '先不聊这个，看这张牌' });
     await expect(skip).toBeEnabled();
     await skip.click();
@@ -94,6 +95,27 @@ for (const width of [390, 1440]) {
     expect(missing).toEqual([]);
   });
 }
+
+
+test('过手 counts face-up in palm before 放回桌上', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('/read');
+  await page.getByRole('button', { name: '我准备好了', exact: true }).click();
+  await page.getByRole('button', { name: '这次不设问题', exact: true }).click();
+  await page.getByRole('button', { name: '过手' }).click();
+  for (const name of ['开始洗牌', '为我洗牌', '让牌落在桌上']) {
+    await page.getByRole('button', { name, exact: true }).click({ timeout: 15000 });
+  }
+  const reveal = page.locator('main').locator('[data-reveal="primary"]');
+  await expect(reveal).toBeVisible({ timeout: 15000 });
+  await reveal.click();
+  await expect(page.locator('[data-card-visual]:visible [data-visual="hand-partial"], [data-card-visual]:visible[data-visual="hand-partial"]').first()).toBeVisible();
+  await expect(page.locator('[data-reveal-count]')).toHaveAttribute('data-reveal-count', '1');
+  await expect(page.locator('[data-reveal-count]')).toContainText('已翻开 1 / 3');
+  // Still 1 before skip (放回桌上)
+  await expect(page.getByRole('button', { name: '先不聊这个，看这张牌' })).toBeEnabled();
+  await expect(page.locator('[data-reveal-count]')).toHaveAttribute('data-reveal-count', '1');
+});
 
 test('reduced motion has no animated deck and missing manifest can be retried', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });

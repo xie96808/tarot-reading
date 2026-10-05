@@ -12,12 +12,12 @@ import {
 
 describe('deal timing', () => {
   it('uses fan + flight + stagger and stays under the celtic cap', () => {
-    expect(dealDurationMs(1, false)).toBe(MOTION.dealFanMs + MOTION.dealFlightMs + 120);
-    expect(dealDurationMs(3, false)).toBe(MOTION.dealFanMs + MOTION.dealFlightMs + MOTION.dealGapThreeMs * 2 + 120);
+    expect(dealDurationMs(1, false)).toBe(MOTION.dealFanMs + MOTION.dealFlightMs + 160);
+    expect(dealDurationMs(3, false)).toBe(MOTION.dealFanMs + MOTION.dealFlightMs + MOTION.dealGapThreeMs * 2 + 160);
     expect(dealDurationMs(10, false)).toBe(
-      Math.min(MOTION.dealFanMs + MOTION.dealFlightMs + MOTION.dealGapCelticMs * 9 + 120, MOTION.dealCapMs),
+      Math.min(MOTION.dealFanMs + MOTION.dealFlightMs + MOTION.dealGapCelticMs * 9 + 160, MOTION.dealCapMs),
     );
-    expect(MOTION.dealCapMs).toBeLessThanOrEqual(2600);
+    expect(MOTION.dealCapMs).toBeLessThanOrEqual(3200);
     expect(dealDurationMs(10, false)).toBeLessThanOrEqual(MOTION.dealCapMs);
     expect(dealDurationMs(10, true)).toBe(0);
   });

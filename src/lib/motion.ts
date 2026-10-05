@@ -2,17 +2,17 @@ export const MOTION = {
   enterMs: 320,
   shuffleCards: 16,
   shuffleLoopMs: 1600,
-  shuffleMinCommitMs: 1900,
+  shuffleMinCommitMs: 2800,
   /** Cadence for hold hand-frame + packet pose swaps (readable in screenshots). */
-  shuffleFrameMs: 520,
+  shuffleFrameMs: 750,
   cutMs: 560,
   /** Cap of DOM edges; thickness also scales with real packet size via --stack-pct. */
   cutVisibleMax: 16,
-  dealFlightMs: 980,
-  dealGapThreeMs: 240,
-  dealGapCelticMs: 130,
-  dealCapMs: 2600,
-  dealFanMs: 320,
+  dealFlightMs: 1200,
+  dealGapThreeMs: 280,
+  dealGapCelticMs: 140,
+  dealCapMs: 3200,
+  dealFanMs: 450,
   flipMs: 640,
   uprightPauseMs: 220,
   uprightMs: 780,
@@ -48,7 +48,7 @@ export function dealDelayMs(index: number, cardCount: number, reduced = false): 
 export function dealDurationMs(cardCount: number, reduced: boolean): number {
   if (reduced) return 0;
   const n = Math.max(1, cardCount);
-  const total = MOTION.dealFanMs + MOTION.dealFlightMs + dealGapMs(n) * (n - 1) + 120;
+  const total = MOTION.dealFanMs + MOTION.dealFlightMs + dealGapMs(n) * (n - 1) + 160;
   return Math.min(total, MOTION.dealCapMs);
 }
 
