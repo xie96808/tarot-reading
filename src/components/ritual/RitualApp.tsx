@@ -21,8 +21,9 @@ import { clearSession, loadSession, pushHistory, saveSession, subscribeStorageSt
 import { loadFaceIndex, pictureSources, subscribeFaceIndex, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
+import { faceUpRevealCount } from '@/lib/face-up-count';
 import { MOTION, cutProportion, dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
-import { tableHandMode } from '@/lib/table-hands';
+import { tableHandMode, type CutHandFrame, type ShuffleHandFrame } from '@/lib/table-hands';
 import { CardBack } from './CardBack';
 import { TableScene } from './TableScene';
 import { ShuffleTable } from './ShuffleTable';
@@ -105,6 +106,8 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   const [shownMeaning, setShownMeaning] = useState<string | null>(null);
   const [snapSession, setSnapSession] = useState<string | null>(null);
   const [restoredRevealed, setRestoredRevealed] = useState<ReadonlySet<string>>(() => new Set());
+  const [shuffleHandFrameState, setShuffleHandFrameState] = useState<ShuffleHandFrame | null>(null);
+  const [cutHandFrameState, setCutHandFrameState] = useState<CutHandFrame | null>(null);
 
   const dispatch = useCallback((event: Parameters<typeof reduce>[1]) => {
     setState((current) => reduce(current, event));
@@ -297,6 +300,18 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               Boolean(openedAtResume?.has(positionId)),
           ]),
         );
+  const faceUpCount =
+    'revealed' in state
+      ? faceUpRevealCount(
+          {
+            stage: state.stage,
+            revealed: state.revealed,
+            pause: 'pause' in state ? state.pause : null,
+          },
+          sceneVisuals,
+        )
+      : 0;
+
   const pauseDraw = pause && 'draws' in state ? state.draws.find((draw) => draw.positionId === pause.positionId) : undefined;
   const pauseFaceReady = !pauseDraw || faces.has(pauseDraw.cardId);
   const choicesReady = Boolean(pauseKey) && pauseFaceReady && (reducedMotion || pauseRestored || actionsReady);
@@ -352,13 +367,39 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
 
   useEffect(() => {
     const title = document.getElementById('stage-title');
-    if (!title) return;
-    title.focus({ preventScroll: true });
-    title.scrollIntoView({
-      block: 'start',
-      inline: 'nearest',
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    if (title) title.focus({ preventScroll: true });
+    const ritual = state.stage === 'shuffle' || state.stage === 'cut' || state.stage === 'deal' || state.stage === 'reveal';
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let passTimer: number | undefined;
+    const scrollRitual = () => {
+      const stage = document.querySelector(`[data-ritual-stage="${state.stage}"]`) as HTMLElement | null
+        ?? document.querySelector('[data-ritual-stage]') as HTMLElement | null;
+      const table = (stage?.querySelector('[data-table-scene]') as HTMLElement | null)
+        ?? (document.querySelector('[data-table-scene]') as HTMLElement | null);
+      // Prefer the table itself so cut/shuffle are not left below the fold under titles.
+      const target = ritual ? (table ?? stage) : title;
+      if (!target) return;
+      target.scrollIntoView({
+        block: ritual ? 'center' : 'start',
+        inline: 'nearest',
+        behavior: reduce ? 'auto' : 'smooth',
+      });
+      if (ritual && table) {
+        passTimer = window.setTimeout(() => {
+          table.scrollIntoView({ block: 'center', inline: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+        }, reduce ? 0 : 120);
+      }
+    };
+    // Double rAF so cut/shuffle DOM is painted after the stage swap.
+    let frame2 = 0;
+    const frame1 = window.requestAnimationFrame(() => {
+      frame2 = window.requestAnimationFrame(scrollRitual);
     });
+    return () => {
+      window.cancelAnimationFrame(frame1);
+      window.cancelAnimationFrame(frame2);
+      if (passTimer !== undefined) window.clearTimeout(passTimer);
+    };
   }, [state.stage]);
 
   useEffect(() => {
@@ -379,7 +420,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
       </h2>
       <p className="visually-hidden" aria-live="polite">
         {state.stage === 'reveal' && 'revealed' in state
-          ? `已翻开 ${state.revealed.length} / ${state.draws.length}`
+          ? `已翻开 ${faceUpCount} / ${state.draws.length}`
           : chapter(state.stage)}
       </p>
       {faceLoadError ? <div className={styles.warn} role="alert">
@@ -621,9 +662,48 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
       ) : null}
 
       {state.stage === 'shuffle' ? (
-        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`}>
+        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`} data-ritual-stage="shuffle">
           <h1>{COPY.shuffleTitle}</h1>
           <p>{state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}</p>
+          <TableScene
+            paused={pageHidden}
+            hand={tableHandMode({
+              stage: 'shuffle',
+              shufflePhase: state.shufflePhase,
+              reduced: reducedMotion || pageHidden,
+              shuffleFrame: shuffleHandFrameState,
+            })}
+            label={state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              holding.current = true;
+              samples.current = [];
+              (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+              dispatch({ type: 'HOLD_START', operationId: newOperationId() });
+            }}
+            onPointerMove={(event) => {
+              if (!holding.current) return;
+              event.preventDefault();
+              samples.current.push({ x: event.clientX, y: event.clientY, t: performance.now() });
+              dispatch({ type: 'HOLD_SAMPLE' });
+            }}
+            onPointerUp={() => {
+              if (!holding.current) return;
+              holding.current = false;
+              dispatch({ type: 'HOLD_RELEASE' });
+            }}
+            onPointerCancel={() => {
+              holding.current = false;
+              dispatch({ type: 'HOLD_CANCEL' });
+            }}
+          >
+            <ShuffleTable
+              phase={state.shufflePhase}
+              paused={pageHidden}
+              reduced={reducedMotion}
+              onHandFrame={setShuffleHandFrameState}
+            />
+          </TableScene>
           <button
             type="button"
             className={styles.primary}
@@ -640,52 +720,27 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               {COPY.backToSpread}
             </button>
           ) : null}
-          <TableScene
-            paused={pageHidden}
-            hand={tableHandMode({
-              stage: 'shuffle',
-              shufflePhase: state.shufflePhase,
-              reduced: reducedMotion || pageHidden,
-            })}
-            label={state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}
-            onPointerDown={(event) => {
-              holding.current = true;
-              samples.current = [];
-              (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-              dispatch({ type: 'HOLD_START', operationId: newOperationId() });
-            }}
-            onPointerMove={(event) => {
-              if (!holding.current) return;
-              samples.current.push({ x: event.clientX, y: event.clientY, t: performance.now() });
-              dispatch({ type: 'HOLD_SAMPLE' });
-            }}
-            onPointerUp={() => {
-              if (!holding.current) return;
-              holding.current = false;
-              dispatch({ type: 'HOLD_RELEASE' });
-            }}
-            onPointerCancel={() => {
-              holding.current = false;
-              dispatch({ type: 'HOLD_CANCEL' });
-            }}
-          >
-            <ShuffleTable phase={state.shufflePhase} paused={pageHidden} reduced={reducedMotion} />
-          </TableScene>
-          <p className={styles.muted}>{COPY.tablePhotoCaption}</p>
         </section>
       ) : null}
 
       {state.stage === 'cut' ? (
-        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`}>
+        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`} data-ritual-stage="cut">
           <h1>{COPY.cutTitle}</h1>
-          <p>
-            {COPY.shuffleSealed} · {state.commitShort}
-          </p>
-          <details>
-            <summary>{COPY.sealedFingerprint}</summary>
-            <code style={{ fontSize: 13, wordBreak: 'break-all' }}>{state.commitFull}</code>
-            <p className={styles.muted}>只检查本标签页牌序是否自洽，不是公证。</p>
-          </details>
+          <p>{COPY.shuffleSealed}</p>
+          <TableScene
+            paused={pageHidden}
+            hand={tableHandMode({ stage: 'cut', reduced: reducedMotion, cutFrame: cutHandFrameState })}
+            label={COPY.cutTitle}
+          >
+            <CutTable
+              cutIndex={state.cutIndex}
+              gathering={cutCommitSession === state.sessionId}
+              reduced={reducedMotion}
+              disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
+              onCutChange={(cutIndex) => dispatch({ type: 'SET_CUT', cutIndex })}
+              onHandFrame={setCutHandFrameState}
+            />
+          </TableScene>
           <label>
             {COPY.cutHint(state.cutIndex)}
             <input
@@ -699,6 +754,9 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               onChange={(event) => dispatch({ type: 'SET_CUT', cutIndex: Number(event.target.value) })}
             />
           </label>
+          <p data-cut-top={cutProportion(state.cutIndex)?.top} data-cut-bottom={cutProportion(state.cutIndex)?.bottom}>
+            上方 {state.cutIndex} 张 · 下方 {78 - state.cutIndex} 张
+          </p>
           <button
             type="button"
             className={styles.ghost}
@@ -724,22 +782,20 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
           >
             {COPY.cutConfirm}
           </button>
-          <p data-cut-top={cutProportion(state.cutIndex)?.top} data-cut-bottom={cutProportion(state.cutIndex)?.bottom}>
-            上方 {state.cutIndex} 张 · 下方 {78 - state.cutIndex} 张
-          </p>
-          <TableScene
-            paused={pageHidden}
-            hand={tableHandMode({ stage: 'cut', reduced: reducedMotion })}
-            label={COPY.cutTitle}
-          >
-            <CutTable cutIndex={state.cutIndex} gathering={cutCommitSession === state.sessionId} />
-          </TableScene>
-          <p className={styles.muted}>{COPY.tablePhotoCaption}</p>
+          <details>
+            <summary>{COPY.sealedFingerprint}</summary>
+            <p className={styles.muted}>{state.commitShort}</p>
+            <code style={{ fontSize: 13, wordBreak: 'break-all' }}>{state.commitFull}</code>
+            <p className={styles.muted}>只检查本标签页牌序是否自洽，不是公证。</p>
+          </details>
         </section>
       ) : null}
 
       {state.stage === 'deal' || state.stage === 'reveal' || state.stage === 'read' ? (
-        <section className={`${styles.stage} ${styles.tableStage}`}>
+        <section
+          className={`${styles.stage} ${styles.tableStage}`}
+          data-ritual-stage={state.stage === 'read' ? 'read' : state.stage}
+        >
           {state.stage === 'deal' ? <p className={styles.dealHint}>牌正在落到桌上</p> : null}
           <div className={state.stage === 'read' && state.view === 'page' ? styles.tableParked : undefined}>
             <TableScene
@@ -802,14 +858,16 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
           ) : null}
           {state.stage === 'reveal' ? (
             <div className={styles.center}>
+              <p className={styles.revealProgress} data-reveal-count={faceUpCount} aria-live="polite">
+                {`已翻开 ${faceUpCount} / ${state.draws.length}`}
+              </p>
               <p className={styles.muted}>{COPY.reversedHint}</p>
               <div className={styles.revealBar}>
-                {state.revealed.length < state.draws.length ? (
+                {state.revealed.length < state.draws.length && !pause && !futureOpen ? (
                   <button
                     type="button"
                     className={styles.primary}
                     data-reveal="primary"
-                    disabled={navigationLocked}
                     onClick={() => dispatch({ type: 'REVEAL_NEXT' })}
                   >
                     {gatedNext || !state.revealed.includes(state.selectedPositionId)
@@ -820,6 +878,11 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                         )
                       : COPY.revealNextClosed}
                   </button>
+                ) : null}
+                {pause ? (
+                  <p className={styles.muted} data-reveal-status="in-progress">
+                    {COPY.revealInProgress}
+                  </p>
                 ) : null}
                 {SCENE_PAUSE_ENABLED && meaningReading ? (
                   <PauseMeaning
@@ -883,8 +946,8 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                   onKeep={(index) => dispatch({ type: 'SET_KEPT_PAUSE', index })}
                 />
               ) : null}
-              <div className={styles.center}>
-                <label>
+              <div className={`${styles.center} ${styles.noteBlock}`}>
+                <label className={styles.noteLabel}>
                   留笺
                   <textarea
                     className={styles.field}

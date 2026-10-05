@@ -112,25 +112,44 @@
 }
 
 .dealing {
-  animation: dealIn var(--deal-ms, 620ms) cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: dealIn var(--deal-ms, 1200ms) cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--deal-delay, 0ms);
 }
 
 @keyframes dealIn {
-  from {
+  0% {
     opacity: 0;
-    transform: translate3d(var(--deal-x, 0px), var(--deal-y, -160px), 0) rotate(-12deg) scale(0.55);
-    filter: brightness(0.7);
+    transform: translate3d(var(--deal-x, 0px), var(--deal-y, -220px), 0) rotate(-22deg) scale(0.42);
+    filter: brightness(0.55);
   }
-  78% {
+  18% {
     opacity: 1;
-    transform: translate3d(0, 7px, 0) rotate(2deg) scale(1.025);
+    transform: translate3d(calc(var(--deal-x, 0px) * 0.72), calc(var(--deal-y, -220px) * 0.72), 0) rotate(-10deg) scale(0.62);
   }
-  to {
+  55% {
+    opacity: 1;
+    transform: translate3d(calc(var(--deal-x, 0px) * 0.22), calc(var(--deal-y, -220px) * 0.18), 0) rotate(5deg) scale(1.05);
+    filter: brightness(0.95);
+  }
+  82% {
+    opacity: 1;
+    transform: translate3d(0, 10px, 0) rotate(1.5deg) scale(1.02);
+    filter: none;
+  }
+  100% {
     opacity: 1;
     transform: none;
     filter: none;
   }
+}
+
+.dealingBoardFan {
+  animation: dealFan var(--deal-fan-ms, 280ms) ease-out both;
+}
+
+@keyframes dealFan {
+  from { opacity: 0.4; transform: translateY(-12px) scale(0.92); }
+  to { opacity: 1; transform: none; }
 }
 
 .label {
@@ -151,6 +170,16 @@
 .action:hover {
   border-color: var(--candle);
   box-shadow: 0 0 18px rgba(196, 163, 90, 0.18);
+}
+.action:active {
+  transform: translateY(1px) scale(0.97);
+  border-color: var(--candle);
+  background: rgba(196, 163, 90, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(196, 163, 90, 0.35);
+}
+.action:focus-visible {
+  outline: 2px solid var(--candle);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -178,7 +207,25 @@
   background: none;
   pointer-events: none;
   transform: translateX(-50%);
+  display: block;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 58%,
+    rgba(0, 0, 0, 0.5) 78%,
+    rgba(0, 0, 0, 0.12) 90%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 58%,
+    rgba(0, 0, 0, 0.5) 78%,
+    rgba(0, 0, 0, 0.12) 90%,
+    transparent 100%
+  );
 }
+
 
 .flip {
   z-index: 1;
@@ -248,8 +295,13 @@
 }
 
 @keyframes palmOpen {
-  from { opacity: 0; transform: translateX(-50%) scale(0.7); }
-  to { opacity: 1; transform: translateX(-50%) scale(1); }
+  from { opacity: 0; transform: translateX(-50%) scale(0.82) translateY(8%); }
+  to { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
+}
+.palm[data-palm-frame='withdraw'] {
+  opacity: 0.88;
+  transform: translateX(-50%) translateY(10%) scale(0.94);
+  transition: opacity var(--settle-ms, 360ms) ease, transform var(--settle-ms, 360ms) cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes palmDrop {

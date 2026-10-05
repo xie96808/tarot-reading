@@ -7,9 +7,11 @@
   border-radius: 12px;
   background: #20150f;
   box-shadow: 0 24px 60px #0007, inset 0 0 0 1px #e7c27822;
+  scroll-margin-top: 12px;
+  scroll-margin-bottom: 24px;
 }
 .play { aspect-ratio: 16 / 10; min-height: 380px; overflow: hidden; }
-.grab { cursor: grab; touch-action: pan-y; user-select: none; }
+.grab { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .grab:active { cursor: grabbing; }
 .surface { position: absolute; inset: 0; z-index: -3; overflow: hidden; border-radius: inherit; pointer-events: none; }
 .surface img { width: 100%; height: 100%; display: block; object-fit: cover; }
@@ -19,6 +21,7 @@
   z-index: -2;
   border-radius: 46%;
   border: 1px solid #c4a35a45;
+  overflow: hidden;
   background:
     repeating-linear-gradient(6deg, #ffffff03 0 1px, transparent 1px 3px),
     repeating-linear-gradient(94deg, #00000010 0 1px, transparent 1px 4px),
@@ -26,12 +29,21 @@
   box-shadow: 0 12px 20px #0008, inset 0 0 0 7px #09191055, inset 0 0 35px #0007;
   pointer-events: none;
 }
+.felt {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  border-radius: inherit;
+}
+
 .light { position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
   background: radial-gradient(ellipse at 12% 0, #ffd68526, transparent 58%);
   animation: candlelight 5s ease-in-out infinite alternate;
 }
 .inscription { position: absolute; top: 8%; left: 0; right: 0; text-align: center; font-size: 12px; letter-spacing: .26em; color: #decfa486; pointer-events: none; }
-.content { position: relative; min-width: 0; width: 100%; }
+.content { position: relative; min-width: 0; width: 100%; z-index: 1; }
 .play .content { position: absolute; inset: 17% 8% 12%; width: 84%; }
 .spread { min-height: 560px; padding: 100px 12% 64px; }
 .spread .mat { inset: 28px 4%; border-radius: 110px; }
@@ -51,4 +63,14 @@
   .spread .mat { border-radius: 70px; inset-inline: 8px; }
 }
 @media (max-width: 400px) { .spread { padding-inline: 16px; } }
+@media (max-height: 720px) {
+  .play { min-height: 280px; height: min(48vh, 340px); aspect-ratio: auto; }
+  .play .content { inset: 10% 5% 8%; width: 90%; }
+  .inscription { font-size: 11px; top: 4%; letter-spacing: .18em; }
+  .spread { min-height: 420px; padding: 64px 8% 40px; }
+}
+@media (max-height: 570px) {
+  .play { min-height: 240px; height: min(56vh, 300px); }
+  .play .content { inset: 8% 4% 6%; }
+}
 @media (prefers-reduced-motion: reduce) { .light, .motes i { animation: none; } .motes { display: none; } }
