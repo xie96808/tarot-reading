@@ -392,3 +392,17 @@
     animation: none;
   }
 }
+
+.noteBlock {
+  text-align: left;
+  align-items: stretch;
+  max-width: 560px;
+  margin-inline: auto;
+}
+.noteLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  color: var(--parchment);
+}

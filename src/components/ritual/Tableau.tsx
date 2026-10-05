@@ -92,7 +92,11 @@ export function Tableau({
       const target = card.parentElement?.getBoundingClientRect();
       if (!target?.width) continue;
       card.style.setProperty('--deal-x', `${source.x + source.width / 2 - target.x - target.width / 2}px`);
-      card.style.setProperty('--deal-y', `${source.y + source.height / 2 - target.y - target.width * .8}px`);
+      card.style.setProperty('--deal-y', `${source.y + source.height / 2 - target.y - target.height / 2}px`);
+      // Restart after vars exist so flight does not flash at the final slot.
+      card.style.animation = 'none';
+      void card.offsetWidth;
+      card.style.animation = '';
     }
   }, [dealing, spreadId, boardWidth]);
 

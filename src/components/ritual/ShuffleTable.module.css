@@ -1,34 +1,84 @@
-.table { position: relative; width: 100%; height: 100%; perspective: 1000px; --riffle-gap: clamp(72px, 15vw, 180px); }
-.card { position: absolute; left: 50%; top: 44%; width: clamp(86px, 20vw, 124px); aspect-ratio: 5 / 8;
-  transform-origin: 50% 82%; z-index: calc(var(--i) + 4); border-radius: 3px;
-  box-shadow: 0 5px 10px #0006; will-change: transform;
+.table {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 1000px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  --riffle-gap: clamp(110px, 26vw, 240px);
+}
+.card {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: clamp(86px, 20vw, 124px);
+  aspect-ratio: 5 / 8;
+  transform-origin: 50% 82%;
+  z-index: calc(var(--i) + 4);
+  border-radius: 3px;
+  box-shadow: 0 5px 10px #0006;
+  will-change: transform;
   transform: translate3d(calc(-50% + var(--fan) * 3px), calc(-50% - var(--layer) * 1px), 0) rotate(calc(var(--fan) * 1.8deg));
 }
-.card img { box-shadow: none; border-radius: 3px; }
-.idle .card { animation: breathe 4.6s ease-in-out infinite alternate; }
-.riffle .card { animation: riffle var(--shuffle-ms, 1500ms) cubic-bezier(.35,0,.2,1) infinite; animation-delay: calc(var(--layer) * -28ms); }
-.sealing .card { animation: seal 1700ms cubic-bezier(.4,0,.2,1) both; animation-delay: calc(var(--layer) * 12ms); }
+.card img { box-shadow: none; border-radius: 3px; pointer-events: none; user-select: none; }
+
+/* Idle: soft breathe */
+.idle .card { animation: breathe 4.6s ease-in-out infinite alternate; transition: none; }
+
+/* Hold pose driven by data-hand-frame — two clear packets, then interleave */
+.table[data-hand-frame='idle'] .card {
+  animation: none;
+  transition: none;
+  transform: translate3d(calc(-50% + var(--fan) * 2px), calc(-50% - var(--layer) * 1px), 0) rotate(calc(var(--fan) * 1.2deg));
+}
+.table[data-hand-frame='split'] .card {
+  animation: none;
+  transition: none;
+  transform: translate3d(
+      calc(-50% + (var(--side) * var(--riffle-gap))),
+      calc(-50% - var(--layer) * 2.2px - 6px),
+      0
+    )
+    rotate(calc(var(--side) * 18deg));
+}
+.table[data-hand-frame='riffle'] .card {
+  animation: none;
+  transition: none;
+  transform: translate3d(
+      calc(-50% + (var(--side) * 22px) + (var(--pair) * 36px)),
+      calc(-50% - var(--layer) * 3.5px - 40px - (var(--pair) * 10px)),
+      0
+    )
+    rotate(calc((var(--side) * 10deg) + (var(--pair) * 16deg)));
+  z-index: calc(20 + var(--pair) * 8 + var(--layer));
+}
+.table[data-hand-frame='seal'] .card {
+  animation: seal 1700ms cubic-bezier(.4,0,.2,1) both;
+  animation-delay: calc(var(--layer) * 14ms);
+  transition: none;
+}
+
 .halo { position: absolute; inset: 5% 10% 20%; border: 1px solid #dec48230; border-radius: 50%; opacity: .4; transform: scale(.9); z-index: 0; }
-.riffle .halo, .sealing .halo { animation: halo 1600ms ease-in-out infinite; }
-.caption { position: absolute; bottom: 0; left: 0; right: 0; color: #e9d8af; font-size: 13px; letter-spacing: .12em; text-align: center; pointer-events: none; z-index: 9; }
+.active .halo, .sealing .halo { animation: halo 1600ms ease-in-out infinite; }
+.caption { position: absolute; bottom: 0; left: 0; right: 0; color: #e9d8af; font-size: 13px; letter-spacing: .12em; text-align: center; pointer-events: none; z-index: 9; user-select: none; }
+
 @keyframes breathe {
   to { transform: translate3d(calc(-50% + var(--fan) * 3.7px), calc(-50% - var(--layer) * 1px - 5px), 0) rotate(calc(var(--fan) * 2.1deg)); }
 }
-@keyframes riffle {
-  0%,100% { transform: translate3d(calc(-50% + var(--side) * 28px), calc(-50% - var(--layer) * 1.5px), 0) rotate(calc(var(--side) * 6deg)); }
-  18% { transform: translate3d(calc(-50% + var(--side) * var(--riffle-gap)), calc(-50% - var(--layer) * 2px - 8px), 0) rotate(calc(var(--side) * 14deg)); }
-  36% { transform: translate3d(calc(-50% + var(--side) * 18px + var(--pair) * 10px), calc(-50% - var(--layer) * 5px - 42px), 0) rotate(calc(var(--side) * 22deg + var(--pair) * 4deg)); }
-  52% { transform: translate3d(calc(-50% + var(--pair) * 22px), calc(-50% - var(--layer) * 3px - 18px), 0) rotate(calc(var(--pair) * -8deg)); }
-  70% { transform: translate3d(calc(-50% + var(--side) * -8px + var(--pair) * 6px), calc(-50% - var(--layer) * 2px - 4px), 0) rotate(calc(var(--side) * -5deg)); }
-  86% { transform: translate3d(calc(-50% + var(--side) * 12px), calc(-50% - var(--layer) * 1.5px), 0) rotate(calc(var(--side) * 3deg)); }
-}
 @keyframes seal {
-  0% { transform: translate3d(calc(-50% + var(--side) * 28px), calc(-50% - var(--layer) * 1px), 0) rotate(calc(var(--side) * 6deg)); }
-  24% { transform: translate3d(calc(-50% + var(--side) * var(--riffle-gap)), calc(-50% - var(--layer) * 2px - 10px), 0) rotate(calc(var(--side) * 14deg)); }
-  48% { transform: translate3d(calc(-50% + var(--pair) * 18px), calc(-50% - var(--layer) * 4px - 30px), 0) rotate(calc(var(--pair) * -6deg)); }
-  72% { transform: translate3d(calc(-50% + var(--side) * 6px), calc(-50% - var(--layer) * 2px), 0) rotate(calc(var(--side) * -2deg)); }
+  0% { transform: translate3d(calc(-50% + var(--side) * 18px + var(--pair) * 28px), calc(-50% - var(--layer) * 3px - 30px), 0) rotate(calc(var(--side) * 8deg)); }
+  35% { transform: translate3d(calc(-50% + var(--side) * var(--riffle-gap) * 0.55), calc(-50% - var(--layer) * 2px - 10px), 0) rotate(calc(var(--side) * 12deg)); }
+  70% { transform: translate3d(calc(-50% + var(--side) * 8px), calc(-50% - var(--layer) * 1.5px), 0) rotate(calc(var(--side) * -2deg)); }
   100% { transform: translate3d(-50%, calc(-50% - var(--i) * .6px), 0) rotate(0deg); }
 }
 @keyframes halo { 0%,100% { opacity: .15; transform: scale(.88); } 50% { opacity: .65; transform: scale(1.05); } }
-.table[data-paused='true'] *, .table[data-paused='true'] .card { animation: none; }
-@media (prefers-reduced-motion: reduce) { .card, .halo { animation: none !important; will-change: auto; } }
+
+.table[data-paused='true'] *, .table[data-paused='true'] .card { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .card, .halo { animation: none !important; transition: none !important; will-change: auto; }
+  .table[data-hand-frame='split'] .card,
+  .table[data-hand-frame='riffle'] .card {
+    transform: translate3d(calc(-50% + var(--side) * 36px), calc(-50% - var(--layer) * 1px), 0) rotate(calc(var(--side) * 6deg));
+  }
+}

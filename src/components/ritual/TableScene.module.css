@@ -9,7 +9,7 @@
   box-shadow: 0 24px 60px #0007, inset 0 0 0 1px #e7c27822;
 }
 .play { aspect-ratio: 16 / 10; min-height: 380px; overflow: hidden; }
-.grab { cursor: grab; touch-action: pan-y; user-select: none; }
+.grab { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .grab:active { cursor: grabbing; }
 .surface { position: absolute; inset: 0; z-index: -3; overflow: hidden; border-radius: inherit; pointer-events: none; }
 .surface img { width: 100%; height: 100%; display: block; object-fit: cover; }
@@ -27,8 +27,7 @@
   box-shadow: 0 12px 20px #0008, inset 0 0 0 7px #09191055, inset 0 0 35px #0007;
   pointer-events: none;
 }
-.felt { position: absolute; inset: 0; display: block; }
-.felt img {
+.felt {
   width: 100%;
   height: 100%;
   display: block;
@@ -62,4 +61,9 @@
   .spread .mat { border-radius: 70px; inset-inline: 8px; }
 }
 @media (max-width: 400px) { .spread { padding-inline: 16px; } }
+@media (max-height: 640px) {
+  .play { min-height: 300px; height: min(52vh, 360px); aspect-ratio: auto; }
+  .play .content { inset: 12% 6% 10%; width: 88%; }
+  .inscription { font-size: 11px; top: 5%; }
+}
 @media (prefers-reduced-motion: reduce) { .light, .motes i { animation: none; } .motes { display: none; } }

@@ -22,7 +22,7 @@ import { loadFaceIndex, pictureSources, subscribeFaceIndex, type FaceUrls } from
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
 import { MOTION, cutProportion, dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
-import { tableHandMode } from '@/lib/table-hands';
+import { tableHandMode, type CutHandFrame, type ShuffleHandFrame } from '@/lib/table-hands';
 import { CardBack } from './CardBack';
 import { TableScene } from './TableScene';
 import { ShuffleTable } from './ShuffleTable';
@@ -106,6 +106,8 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   const [snapSession, setSnapSession] = useState<string | null>(null);
   const [restoredRevealed, setRestoredRevealed] = useState<ReadonlySet<string>>(() => new Set());
   const [visibleRevealCount, setVisibleRevealCount] = useState(0);
+  const [shuffleHandFrameState, setShuffleHandFrameState] = useState<ShuffleHandFrame | null>(null);
+  const [cutHandFrameState, setCutHandFrameState] = useState<CutHandFrame | null>(null);
 
   const dispatch = useCallback((event: Parameters<typeof reduce>[1]) => {
     setState((current) => reduce(current, event));
@@ -218,17 +220,16 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     return () => window.clearTimeout(timer);
   }, [state, dispatch]);
 
-  const revealTargetCount =
-    (state.stage === 'reveal' || state.stage === 'read') && 'revealed' in state ? state.revealed.length : 0;
-  if (revealTargetCount < visibleRevealCount) {
+  // Count face-up cards: sealed reveals + the card currently open in 推门/过手 pause.
+  const revealTargetCount = (() => {
+    if ((state.stage !== 'reveal' && state.stage !== 'read') || !('revealed' in state)) return 0;
+    const ids = new Set(state.revealed);
+    if (state.stage === 'reveal' && state.pause) ids.add(state.pause.positionId);
+    return ids.size;
+  })();
+  if (revealTargetCount !== visibleRevealCount) {
     setVisibleRevealCount(revealTargetCount);
   }
-  useEffect(() => {
-    if (revealTargetCount <= visibleRevealCount) return;
-    const delay = reducedMotion || document.hidden ? 0 : MOTION.flipMs;
-    const timer = window.setTimeout(() => setVisibleRevealCount(revealTargetCount), delay);
-    return () => window.clearTimeout(timer);
-  }, [revealTargetCount, visibleRevealCount, reducedMotion]);
 
   useEffect(() => {
     if (state.stage !== 'cut' || cutCommitSession !== state.sessionId) return;
@@ -365,15 +366,18 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
 
   useEffect(() => {
     const title = document.getElementById('stage-title');
-    if (!title) return;
-    title.focus({ preventScroll: true });
-    // Keep shuffle → cut → deal on the same viewport; only scroll for major chapter changes.
-    const keepTable = state.stage === 'cut' || state.stage === 'deal' || state.stage === 'reveal';
-    if (keepTable) return;
-    title.scrollIntoView({
-      block: 'start',
+    if (title) title.focus({ preventScroll: true });
+    const ritual = state.stage === 'shuffle' || state.stage === 'cut' || state.stage === 'deal' || state.stage === 'reveal';
+    const target = ritual
+      ? (document.querySelector('[data-table-scene]') as HTMLElement | null)
+      : title;
+    if (!target) return;
+    // Never mid-drag: cut table owns pointer; this only runs on stage enter.
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({
+      block: ritual ? 'center' : 'start',
       inline: 'nearest',
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      behavior: reduce ? 'auto' : 'smooth',
     });
   }, [state.stage]);
 
@@ -662,9 +666,11 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               stage: 'shuffle',
               shufflePhase: state.shufflePhase,
               reduced: reducedMotion || pageHidden,
+              shuffleFrame: shuffleHandFrameState,
             })}
             label={state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}
             onPointerDown={(event) => {
+              event.preventDefault();
               holding.current = true;
               samples.current = [];
               (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -672,6 +678,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
             }}
             onPointerMove={(event) => {
               if (!holding.current) return;
+              event.preventDefault();
               samples.current.push({ x: event.clientX, y: event.clientY, t: performance.now() });
               dispatch({ type: 'HOLD_SAMPLE' });
             }}
@@ -685,7 +692,12 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               dispatch({ type: 'HOLD_CANCEL' });
             }}
           >
-            <ShuffleTable phase={state.shufflePhase} paused={pageHidden} reduced={reducedMotion} />
+            <ShuffleTable
+              phase={state.shufflePhase}
+              paused={pageHidden}
+              reduced={reducedMotion}
+              onHandFrame={setShuffleHandFrameState}
+            />
           </TableScene>
         </section>
       ) : null}
@@ -696,7 +708,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
           <p>{COPY.shuffleSealed}</p>
           <TableScene
             paused={pageHidden}
-            hand={tableHandMode({ stage: 'cut', reduced: reducedMotion })}
+            hand={tableHandMode({ stage: 'cut', reduced: reducedMotion, cutFrame: cutHandFrameState })}
             label={COPY.cutTitle}
           >
             <CutTable
@@ -705,6 +717,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               reduced={reducedMotion}
               disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
               onCutChange={(cutIndex) => dispatch({ type: 'SET_CUT', cutIndex })}
+              onHandFrame={setCutHandFrameState}
             />
           </TableScene>
           <label>
@@ -905,8 +918,8 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                   onKeep={(index) => dispatch({ type: 'SET_KEPT_PAUSE', index })}
                 />
               ) : null}
-              <div className={styles.center}>
-                <label>
+              <div className={`${styles.center} ${styles.noteBlock}`}>
+                <label className={styles.noteLabel}>
                   留笺
                   <textarea
                     className={styles.field}

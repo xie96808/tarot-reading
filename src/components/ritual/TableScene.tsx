@@ -29,7 +29,6 @@ export function TableScene({
   paused = false,
 }: TableSceneProps) {
   const [jpegFallback, setJpegFallback] = useState(false);
-  const [feltFallback, setFeltFallback] = useState(false);
   return (
     <div
       className={`${styles.scene} ${styles[layout]} ${onPointerDown ? styles.grab : ''}`}
@@ -59,18 +58,15 @@ export function TableScene({
         />
       </picture>
       <div className={styles.mat} aria-hidden="true">
-        <picture className={styles.felt}>
-          {!feltFallback ? <source type="image/webp" srcSet="/table/felt-mat-oval.webp" /> : null}
-          <img
-            data-felt-mat
-            src="/table/felt-mat-oval.png"
-            alt=""
-            width={2048}
-            height={1280}
-            draggable={false}
-            onError={() => setFeltFallback(true)}
-          />
-        </picture>
+        <img
+          className={styles.felt}
+          data-felt-mat
+          src="/table/felt-mat-oval.webp"
+          alt=""
+          width={2048}
+          height={1280}
+          draggable={false}
+        />
       </div>
       <div className={styles.light} aria-hidden="true" />
       <div className={styles.motes} aria-hidden="true">

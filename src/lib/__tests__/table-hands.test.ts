@@ -12,8 +12,10 @@ describe('tableHandMode', () => {
   it('shows idle hands waiting, riffle while holding, and cut on the cut stage', () => {
     expect(tableHandMode({ stage: 'shuffle', shufflePhase: 'idle', reduced: false })).toBe('idle');
     expect(tableHandMode({ stage: 'shuffle', shufflePhase: 'holding', reduced: false })).toBe('riffle');
+    expect(tableHandMode({ stage: 'shuffle', shufflePhase: 'holding', reduced: false, shuffleFrame: 'split' })).toBe('split');
     expect(tableHandMode({ stage: 'shuffle', shufflePhase: 'committing', reduced: false })).toBe('riffle');
     expect(tableHandMode({ stage: 'cut', reduced: false })).toBe('cut');
+    expect(tableHandMode({ stage: 'cut', reduced: false, cutFrame: 'lift' })).toBe('lift');
     expect(tableHandMode({ stage: 'deal', reduced: false })).toBe('none');
   });
 
@@ -24,12 +26,11 @@ describe('tableHandMode', () => {
 });
 
 describe('shuffle and cut hand frames', () => {
-  it('cycles idle → split → riffle while holding, then seals on commit', () => {
+  it('cycles split → riffle while holding (never idle mid-hold), then seals on commit', () => {
     expect(shuffleHandFrame('idle', false)).toBe('idle');
-    expect(shuffleHandFrame('holding', false, 0)).toBe('idle');
-    expect(shuffleHandFrame('holding', false, 1)).toBe('split');
-    expect(shuffleHandFrame('holding', false, 2)).toBe('riffle');
-    expect(shuffleHandFrame('holding', false, 3)).toBe('idle');
+    expect(shuffleHandFrame('holding', false, 0)).toBe('split');
+    expect(shuffleHandFrame('holding', false, 1)).toBe('riffle');
+    expect(shuffleHandFrame('holding', false, 2)).toBe('split');
     expect(shuffleHandFrame('committing', false)).toBe('seal');
     expect(shuffleHandFrame('holding', true)).toBeNull();
   });

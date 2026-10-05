@@ -112,7 +112,7 @@
 }
 
 .dealing {
-  animation: dealIn var(--deal-ms, 620ms) cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: dealIn var(--deal-ms, 980ms) cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--deal-delay, 0ms);
 }
 
@@ -203,11 +203,8 @@
   pointer-events: none;
   transform: translateX(-50%);
   display: block;
-}
-.palm img {
-  display: block;
-  width: 100%;
-  height: auto;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
 }
 
 .flip {

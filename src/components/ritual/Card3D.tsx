@@ -256,12 +256,18 @@ function ReceivePalm({
   const holdReady = pose.holdReady;
   const frame: ReceiveHandFrame = settled ? 'withdraw' : holdReady || snap || introHold ? 'hold' : 'appear';
   const src = RECEIVE_HAND_SRC[frame];
-  const png = src.replace(/\.webp$/, '.png');
   return (
-    <picture className={styles.palm} data-part="palm" data-palm-frame={frame}>
-      <source type="image/webp" srcSet={src} />
-      <img src={png} alt="" width={1000} height={1200} draggable={false} />
-    </picture>
+    <img
+      className={styles.palm}
+      data-part="palm"
+      data-palm-frame={frame}
+      key={src}
+      src={src}
+      alt=""
+      width={1000}
+      height={1200}
+      draggable={false}
+    />
   );
 }
 

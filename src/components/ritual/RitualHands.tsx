@@ -1,48 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { ShufflePhase } from '@/lib/ritual-machine';
-import { MOTION } from '@/lib/motion';
 import {
   CUT_HAND_SRC,
   SHUFFLE_HAND_SRC,
-  cutHandFrame,
-  shuffleHandFrame,
   type CutHandFrame,
   type ShuffleHandFrame,
 } from '@/lib/table-hands';
 import styles from './RitualHands.module.css';
 
 type ShuffleHandsProps = {
-  phase: ShufflePhase;
-  reduced?: boolean;
-  paused?: boolean;
+  frame: ShuffleHandFrame;
 };
 
-export function ShuffleHands({ phase, reduced = false, paused = false }: ShuffleHandsProps) {
-  const holding = !reduced && !paused && phase === 'holding';
-  const [elapsed, setElapsed] = useState(0);
-  useEffect(() => {
-    if (!holding) return;
-    const started = performance.now();
-    const id = window.setInterval(() => setElapsed(performance.now() - started), MOTION.shuffleFrameMs);
-    return () => window.clearInterval(id);
-  }, [holding, phase]);
-  const holdTick = holding ? Math.floor(elapsed / MOTION.shuffleFrameMs) : 0;
-  const frame = shuffleHandFrame(phase, reduced, holdTick);
-  if (!frame) return null;
+export function ShuffleHands({ frame }: ShuffleHandsProps) {
   return <HandPicture kind="shuffle" frame={frame} z={frame === 'seal' ? 'over' : 'under'} />;
 }
 
 type CutHandsProps = {
-  gathering?: boolean;
-  dragging?: boolean;
-  reduced?: boolean;
+  frame: CutHandFrame;
 };
 
-export function CutHands({ gathering = false, dragging = false, reduced = false }: CutHandsProps) {
-  const frame = cutHandFrame({ gathering, dragging, reduced });
-  if (!frame) return null;
+export function CutHands({ frame }: CutHandsProps) {
   return <HandPicture kind="cut" frame={frame} z={frame === 'press' ? 'over' : 'under'} />;
 }
 
@@ -59,15 +37,15 @@ function HandPicture({
     kind === 'shuffle'
       ? SHUFFLE_HAND_SRC[frame as ShuffleHandFrame]
       : CUT_HAND_SRC[frame as CutHandFrame];
-  const png = src.replace(/\.webp$/, '.png');
   return (
-    <picture
+    <div
       className={`${styles.hands} ${z === 'over' ? styles.over : styles.under}`}
       data-ritual-hands={kind}
       data-hand-frame={frame}
+      aria-hidden="true"
     >
-      <source type="image/webp" srcSet={src} />
-      <img src={png} alt="" width={1400} height={1100} draggable={false} />
-    </picture>
+      {/* key forces a real src swap so mid-hold frames never stick on idle pixels */}
+      <img key={src} src={src} alt="" width={1400} height={1100} draggable={false} />
+    </div>
   );
 }

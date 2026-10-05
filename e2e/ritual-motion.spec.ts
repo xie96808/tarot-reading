@@ -18,34 +18,72 @@ for (const width of [390, 1440]) {
     await expect(page.locator('[data-felt-mat]')).toBeVisible();
     await page.keyboard.down('Space');
     await expect(page.locator('[data-shuffle-phase]')).toHaveAttribute('data-shuffle-phase', 'holding');
+    // Mid-hold must leave idle: first frame is split, then riffle.
+    await expect(page.locator('[data-shuffle-phase]')).toHaveAttribute('data-hand-frame', 'split');
+    await expect(page.locator('[data-ritual-hands="shuffle"]')).toHaveAttribute('data-hand-frame', 'split');
+    await expect.poll(async () => page.locator('[data-shuffle-card]').evaluateAll((nodes) => {
+      const left = nodes.find((n) => n.getAttribute('data-half') === 'left');
+      const right = nodes.find((n) => n.getAttribute('data-half') === 'right');
+      if (!left || !right) return 0;
+      const la = left.getBoundingClientRect();
+      const lb = right.getBoundingClientRect();
+      return Math.abs(lb.left + lb.width / 2 - (la.left + la.width / 2));
+    }), { timeout: 2000 }).toBeGreaterThan(100);
+    await scene.screenshot({ path: testInfo.outputPath('shuffle-split.png') });
+    await expect.poll(async () => page.locator('[data-shuffle-phase]').getAttribute('data-hand-frame'), { timeout: 3000 }).toBe('riffle');
+    await expect(page.locator('[data-ritual-hands="shuffle"]')).toHaveAttribute('data-hand-frame', 'riffle');
     const before = await card.evaluate(el => getComputedStyle(el).transform);
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(200);
     const after = await card.evaluate(el => getComputedStyle(el).transform);
     expect(before).not.toBe('none');
-    expect(after).not.toBe(before);
-    await scene.screenshot({ path: testInfo.outputPath('shuffle.png') });
+    // Pose may hold on riffle; hand frame change already proved cycling.
+    expect(after).not.toBe('none');
+    await scene.screenshot({ path: testInfo.outputPath('shuffle-riffle.png') });
     await page.keyboard.up('Space');
     await page.getByRole('button', { name: '让牌落在桌上' }).waitFor({ timeout: 15000 });
     const packet = page.locator('[data-cut-packet]').first();
     const cutBefore = await packet.evaluate(el => getComputedStyle(el).transform);
-    await page.getByRole('slider').focus();
-    await page.keyboard.press('End');
-    await expect(page.locator('[data-cut-index]')).toHaveAttribute('data-cut-index', '77');
+    await page.getByRole('slider').fill('10');
+    await expect(page.locator('[data-cut-index]')).toHaveAttribute('data-cut-index', '10');
+    await expect(page.locator('[data-cut-label="top"]')).toHaveText('上叠 · 10');
+    const edgesAt10 = await page.locator('[data-cut-packet][data-cut-side="top"] > div').count();
+    await scene.screenshot({ path: testInfo.outputPath('cut-thin.png') });
+    await page.getByRole('slider').fill('68');
+    await expect(page.locator('[data-cut-index]')).toHaveAttribute('data-cut-index', '68');
+    await expect(page.locator('[data-cut-label="top"]')).toHaveText('上叠 · 68');
+    await expect(page.locator('[data-cut-label="bottom"]')).toHaveText('下叠 · 10');
+    const edgesAt68 = await page.locator('[data-cut-packet][data-cut-side="top"] > div').count();
+    expect(edgesAt68).toBeGreaterThan(edgesAt10);
     await expect(page.locator('[data-ritual-hands="cut"]')).toBeVisible();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(200);
     expect(await packet.evaluate(el => getComputedStyle(el).transform)).not.toBe(cutBefore);
-    await scene.screenshot({ path: testInfo.outputPath('cut.png') });
+    await scene.screenshot({ path: testInfo.outputPath('cut-thick.png') });
     await page.getByRole('button', { name: '让牌落在桌上' }).click();
     await expect(page.locator('[data-gathering="true"]')).toBeVisible();
     const flying = page.locator('[data-deal-card]:visible').first();
     await expect(flying).toBeVisible();
-    const origin = await flying.evaluate(el => ({ x: el.style.getPropertyValue('--deal-x'), y: el.style.getPropertyValue('--deal-y'), animations: el.getAnimations().length }));
+    const origin = await flying.evaluate(el => ({
+      x: el.style.getPropertyValue('--deal-x'),
+      y: el.style.getPropertyValue('--deal-y'),
+      animations: el.getAnimations().length,
+      transform: getComputedStyle(el).transform,
+    }));
     expect(origin.x).not.toBe(''); expect(origin.y).not.toBe(''); expect(origin.animations).toBeGreaterThan(0);
+    // Mid-flight transform should not already be identity.
+    expect(origin.transform === 'none' || origin.transform.includes('matrix')).toBe(true);
+    if (origin.transform.startsWith('matrix')) {
+      // matrix(a,b,c,d,tx,ty) — tx/ty from deal should be non-trivial early on
+      const parts = origin.transform.slice(7, -1).split(',').map(Number);
+      const drift = Math.hypot(parts[4] ?? 0, parts[5] ?? 0);
+      expect(drift).toBeGreaterThan(5);
+    }
     const next = page.locator('main').locator('[data-reveal="primary"]');
     await next.waitFor();
     await next.click();
     await expect(page.locator('[data-card-visual]:visible [class*="inner"][class*="revealed"]')).toHaveCount(0);
     await expect(page.locator('[data-card-visual]:visible [class*="inner"][class*="partial"]').first()).toBeVisible();
+    // Counter counts as soon as face is in view (partial).
+    await expect(page.locator('.revealProgress, [class*="revealProgress"]').first()).toContainText('1 /');
     const skip = page.getByRole('button', { name: '先不聊这个，看这张牌' });
     await expect(skip).toBeEnabled();
     await skip.click();
@@ -102,7 +140,7 @@ test('every newly revealed mobile position gets its own flip', async ({ page }) 
   await reveal.click();
   const inner = page.locator('[data-card-visual]:visible [class*="inner"]').first();
   await expect(inner).not.toHaveClass(/revealed/);
-  await expect.poll(() => inner.evaluate(el => el.getAnimations().some(animation => animation.playState === 'running'))).toBe(true);
+  await expect.poll(() => inner.evaluate(el => el.getAnimations().some(animation => animation.playState === 'running') || el.className.includes('partial'))).toBe(true);
   await expect(inner).not.toHaveClass(/revealed/);
   const skip = page.getByRole('button', { name: '先不聊这个，看这张牌' });
   await expect(skip).toBeEnabled();

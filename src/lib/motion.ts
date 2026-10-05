@@ -1,16 +1,18 @@
 export const MOTION = {
   enterMs: 320,
   shuffleCards: 16,
-  shuffleLoopMs: 1500,
+  shuffleLoopMs: 1600,
   shuffleMinCommitMs: 1900,
-  shuffleFrameMs: 420,
+  /** Cadence for hold hand-frame + packet pose swaps (readable in screenshots). */
+  shuffleFrameMs: 520,
   cutMs: 560,
-  cutVisibleMax: 10,
-  dealFlightMs: 720,
-  dealGapThreeMs: 190,
-  dealGapCelticMs: 110,
-  dealCapMs: 1900,
-  dealFanMs: 280,
+  /** Cap of DOM edges; thickness also scales with real packet size via --stack-pct. */
+  cutVisibleMax: 16,
+  dealFlightMs: 980,
+  dealGapThreeMs: 240,
+  dealGapCelticMs: 130,
+  dealCapMs: 2600,
+  dealFanMs: 320,
   flipMs: 640,
   uprightPauseMs: 220,
   uprightMs: 780,
@@ -46,7 +48,7 @@ export function dealDelayMs(index: number, cardCount: number, reduced = false): 
 export function dealDurationMs(cardCount: number, reduced: boolean): number {
   if (reduced) return 0;
   const n = Math.max(1, cardCount);
-  const total = MOTION.dealFanMs + MOTION.dealFlightMs + dealGapMs(n) * (n - 1) + 80;
+  const total = MOTION.dealFanMs + MOTION.dealFlightMs + dealGapMs(n) * (n - 1) + 120;
   return Math.min(total, MOTION.dealCapMs);
 }
 
@@ -72,11 +74,20 @@ export function cutProportion(cutIndex: number): { top: number; bottom: number; 
   return { top: cutIndex, bottom: 78 - cutIndex, topPct: cutIndex / 78 };
 }
 
+/** Visible edge count scales with real packet size so 8 vs 70 look very different. */
 export function visibleCutCounts(cutIndex: number): { top: number; bottom: number } {
   const topRaw = Math.min(77, Math.max(1, cutIndex));
   const bottomRaw = 78 - topRaw;
-  return {
-    top: Math.min(MOTION.cutVisibleMax, topRaw),
-    bottom: Math.min(MOTION.cutVisibleMax, bottomRaw),
+  const layers = (n: number) => {
+    // 1→2 edges, 39→10, 77→16
+    const t = n / 77;
+    return Math.max(2, Math.min(MOTION.cutVisibleMax, Math.round(2 + t * (MOTION.cutVisibleMax - 2))));
   };
+  return { top: layers(topRaw), bottom: layers(bottomRaw) };
+}
+
+/** Per-card edge offset in px grows with real packet thickness. */
+export function cutEdgeGapPx(packetCount: number): number {
+  const t = Math.min(77, Math.max(1, packetCount)) / 77;
+  return 1.6 + t * 4.4;
 }

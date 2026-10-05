@@ -10,12 +10,12 @@ describe('layered ritual assets and timing', () => {
     expect(statSync(file).size).toBeLessThan(160000);
   });
 
-  it('ships felt mat webp with png fallback', async () => {
+  it('ships felt mat as webp only (no fat png in public)', async () => {
     const webp = await sharp('public/table/felt-mat-oval.webp').metadata();
     expect(webp.width).toBeGreaterThanOrEqual(1600);
     expect(webp.height).toBeGreaterThanOrEqual(1000);
     expect(statSync('public/table/felt-mat-oval.webp').size).toBeLessThan(200000);
-    expect(existsSync('public/table/felt-mat-oval.png')).toBe(true);
+    expect(existsSync('public/table/felt-mat-oval.png')).toBe(false);
   });
 
   it.each([
@@ -36,16 +36,27 @@ describe('layered ritual assets and timing', () => {
     expect(statSync(file).size).toBeGreaterThan(500);
   });
 
+  it('does not ship redundant hand PNGs in public', () => {
+    expect(existsSync('public/hands/shuffle/idle.png')).toBe(false);
+    expect(existsSync('public/hands/cut/lift.png')).toBe(false);
+    expect(existsSync('public/hands/receive/hold.png')).toBe(false);
+    expect(existsSync('public/hands/1.png')).toBe(false);
+  });
+
   it('does not use invalid JavaScript modulo in CSS animation transforms', () => {
     const css = readFileSync('src/components/ritual/ShuffleTable.module.css', 'utf8');
     expect(css).not.toMatch(/var\(--i\)\s*%/);
     expect(css).toContain('var(--layer)');
+    expect(css).toContain("data-hand-frame='split'");
+    expect(css).toContain("data-hand-frame='riffle'");
   });
 
   it('keeps the seal and final staggered flight onscreen until settled', () => {
     expect(MOTION.shuffleMinCommitMs).toBeGreaterThanOrEqual(1700 + 7 * 12);
     expect(dealDurationMs(10, false)).toBeGreaterThanOrEqual(MOTION.dealFlightMs + 9 * MOTION.dealGapCelticMs);
     expect(MOTION.cutMs).toBeGreaterThanOrEqual(440);
-    expect(MOTION.dealCapMs).toBeLessThanOrEqual(1900);
+    expect(MOTION.dealFlightMs).toBeGreaterThanOrEqual(900);
+    expect(MOTION.dealCapMs).toBeLessThanOrEqual(2600);
+    expect(MOTION.shuffleFrameMs).toBeGreaterThanOrEqual(400);
   });
 });
