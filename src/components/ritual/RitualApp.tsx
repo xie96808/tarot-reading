@@ -370,25 +370,36 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     if (title) title.focus({ preventScroll: true });
     const ritual = state.stage === 'shuffle' || state.stage === 'cut' || state.stage === 'deal' || state.stage === 'reveal';
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let passTimer: number | undefined;
     const scrollRitual = () => {
-      const stage = document.querySelector('[data-ritual-stage]') as HTMLElement | null;
-      const table = document.querySelector('[data-table-scene]') as HTMLElement | null;
-      const target = ritual ? (stage ?? table) : title;
+      const stage = document.querySelector(`[data-ritual-stage="${state.stage}"]`) as HTMLElement | null
+        ?? document.querySelector('[data-ritual-stage]') as HTMLElement | null;
+      const table = (stage?.querySelector('[data-table-scene]') as HTMLElement | null)
+        ?? (document.querySelector('[data-table-scene]') as HTMLElement | null);
+      // Prefer the table itself so cut/shuffle are not left below the fold under titles.
+      const target = ritual ? (table ?? stage) : title;
       if (!target) return;
       target.scrollIntoView({
-        block: ritual ? 'start' : 'start',
+        block: ritual ? 'center' : 'start',
         inline: 'nearest',
         behavior: reduce ? 'auto' : 'smooth',
       });
-      // Second pass after layout (spread/deal geometry) so cards are not clipped.
       if (ritual && table) {
-        window.setTimeout(() => {
+        passTimer = window.setTimeout(() => {
           table.scrollIntoView({ block: 'center', inline: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
-        }, reduce ? 0 : 80);
+        }, reduce ? 0 : 120);
       }
     };
-    const frame = window.requestAnimationFrame(() => scrollRitual());
-    return () => window.cancelAnimationFrame(frame);
+    // Double rAF so cut/shuffle DOM is painted after the stage swap.
+    let frame2 = 0;
+    const frame1 = window.requestAnimationFrame(() => {
+      frame2 = window.requestAnimationFrame(scrollRitual);
+    });
+    return () => {
+      window.cancelAnimationFrame(frame1);
+      window.cancelAnimationFrame(frame2);
+      if (passTimer !== undefined) window.clearTimeout(passTimer);
+    };
   }, [state.stage]);
 
   useEffect(() => {
@@ -852,12 +863,11 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               </p>
               <p className={styles.muted}>{COPY.reversedHint}</p>
               <div className={styles.revealBar}>
-                {state.revealed.length < state.draws.length ? (
+                {state.revealed.length < state.draws.length && !pause && !futureOpen ? (
                   <button
                     type="button"
                     className={styles.primary}
                     data-reveal="primary"
-                    disabled={navigationLocked}
                     onClick={() => dispatch({ type: 'REVEAL_NEXT' })}
                   >
                     {gatedNext || !state.revealed.includes(state.selectedPositionId)
@@ -868,6 +878,11 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                         )
                       : COPY.revealNextClosed}
                   </button>
+                ) : null}
+                {pause ? (
+                  <p className={styles.muted} data-reveal-status="in-progress">
+                    {COPY.revealInProgress}
+                  </p>
                 ) : null}
                 {SCENE_PAUSE_ENABLED && meaningReading ? (
                   <PauseMeaning

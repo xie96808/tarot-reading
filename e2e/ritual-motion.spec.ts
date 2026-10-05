@@ -112,6 +112,9 @@ test('过手 counts face-up in palm before 放回桌上', async ({ page }) => {
   await expect(page.locator('[data-card-visual]:visible [data-visual="hand-partial"], [data-card-visual]:visible[data-visual="hand-partial"]').first()).toBeVisible();
   await expect(page.locator('[data-reveal-count]')).toHaveAttribute('data-reveal-count', '1');
   await expect(page.locator('[data-reveal-count]')).toContainText('已翻开 1 / 3');
+  // Flip CTA must not invite flipping the palm card again.
+  await expect(page.locator('main [data-reveal="primary"]')).toHaveCount(0);
+  await expect(page.locator('[data-reveal-status="in-progress"]')).toContainText('进行中');
   // Still 1 before skip (放回桌上)
   await expect(page.getByRole('button', { name: '先不聊这个，看这张牌' })).toBeEnabled();
   await expect(page.locator('[data-reveal-count]')).toHaveAttribute('data-reveal-count', '1');
