@@ -12,7 +12,7 @@ describe('scene beat durations', () => {
   it('locks seam, partial flip, complete, palm, and settle', () => {
     expect(sceneBeatDurations(false)).toEqual({
       seamMs: 260,
-      partialFlipMs: 640,
+      partialFlipMs: MOTION.flipMs,
       completeMs: 260,
       palmMs: 520,
       settleMs: 360,
@@ -44,7 +44,7 @@ describe('scene beat durations', () => {
 
   it('keeps choices disabled until the door or the palm has finished', () => {
     expect(pauseActionsReadyMs('door', false)).toBe(MOTION.seamLeadMs + MOTION.seamMs + MOTION.flipMs);
-    expect(pauseActionsReadyMs('door', false)).toBe(980);
+    expect(pauseActionsReadyMs('door', false)).toBe(80 + 260 + 480);
     expect(pauseActionsReadyMs('hand', false)).toBe(520);
     expect(meaningAfterPauseMs('door', false)).toBe(260);
     expect(meaningAfterPauseMs('hand', false)).toBe(360);
@@ -52,9 +52,9 @@ describe('scene beat durations', () => {
 
   it('opens the future sentence after a full door or a settled palm', () => {
     expect(futureBeatSchedule('door', false)).toEqual({
-      sentenceAtMs: 900,
-      meaningAtMs: 900 + MOTION.readFadeMs,
-      doneAtMs: 900 + MOTION.readFadeMs * 2,
+      sentenceAtMs: 740,
+      meaningAtMs: 740 + MOTION.readFadeMs,
+      doneAtMs: 740 + MOTION.readFadeMs * 2,
     });
     expect(futureBeatSchedule('hand', false).sentenceAtMs).toBe(880);
   });

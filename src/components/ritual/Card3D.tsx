@@ -18,7 +18,6 @@ type Card3DProps = {
   alt: string;
   reversed?: boolean;
   sizes: string;
-  onReveal?: () => void;
   label?: string;
   crossing?: boolean;
   dealDelayMs?: number;
@@ -27,6 +26,10 @@ type Card3DProps = {
   visual?: SceneVisual;
   /** Snap only for a restored pause draft or a card already open on read. */
   sceneInstant?: boolean;
+  /** Overview copies show the face without replaying the flip. */
+  snapFace?: boolean;
+  /** Thumbnail copies leave the upright control on the large card. */
+  uprightControl?: boolean;
 };
 
 type SceneFrom = SceneVisual | 'mount';
@@ -37,7 +40,6 @@ export function Card3D({
   alt,
   reversed = false,
   sizes,
-  onReveal,
   label,
   crossing,
   dealDelayMs = 0,
@@ -45,20 +47,28 @@ export function Card3D({
   animateOnMount = false,
   visual,
   sceneInstant = false,
+  snapFace = false,
+  uprightControl = true,
 }: Card3DProps) {
   const reduced = useReducedMotion();
   const scene = visual !== undefined;
   const snap = reduced || sceneInstant;
   const [presentation, setPresentation] = useState({
     revealed,
-    flipped: revealed && !animateOnMount,
+    flipped: revealed && (snapFace || !animateOnMount),
     view: 'as-dealt' as FaceView,
     manual: false,
     justRevealed: animateOnMount,
   });
 
   if (!scene && presentation.revealed !== revealed) {
-    setPresentation({ revealed, flipped: false, view: 'as-dealt', manual: false, justRevealed: revealed });
+    setPresentation({
+      revealed,
+      flipped: snapFace ? revealed : false,
+      view: 'as-dealt',
+      manual: false,
+      justRevealed: revealed && !snapFace,
+    });
   }
   const pose = useScenePose(visual, snap);
   const [holdFor, setHoldFor] = useState<SceneVisual | undefined>(() =>
@@ -80,11 +90,11 @@ export function Card3D({
   const { flipped, view } = presentation;
 
   useEffect(() => {
-    if (scene) return;
+    if (scene || snapFace) return;
     if (!revealed) return;
     const frame = requestAnimationFrame(() => setPresentation((current) => ({ ...current, flipped: true })));
     return () => cancelAnimationFrame(frame);
-  }, [revealed, scene]);
+  }, [revealed, scene, snapFace]);
 
   useEffect(() => {
     if (introHold || !scene || !visual) return;
@@ -101,8 +111,7 @@ export function Card3D({
   const beats = sceneBeatDurations(reduced);
   const showFace = scene ? visual !== 'back' : revealed;
   const showBadge = reversed && showFace;
-  const showUpright = reversed && (scene ? openFace && (visual === 'door-full' || visual === 'hand-settled') : revealed);
-  const showReveal = !showUpright && Boolean(onReveal) && (scene ? visual === 'back' : !revealed);
+  const showUpright = uprightControl && reversed && (scene ? openFace && (visual === 'door-full' || visual === 'hand-settled') : revealed);
   const seam = !reduced && (visual === 'door-partial' || (visual === 'door-full' && pose.from === 'back' && !openFace));
   const poseName = !scene || !visual
     ? undefined
@@ -181,11 +190,6 @@ export function Card3D({
             </span>
           ) : null}
         </p>
-      ) : null}
-      {showReveal ? (
-        <button type="button" className={styles.action} data-part="reveal" onClick={onReveal}>
-          {COPY.revealAction}
-        </button>
       ) : null}
       {showUpright ? (
         <button

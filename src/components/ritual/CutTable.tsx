@@ -118,10 +118,6 @@ export function CutTable({
           ))}
         </div>
       ))}
-      <div className={styles.counts} aria-hidden="true">
-        <span data-cut-label="top">上叠 · {localCut}</span>
-        <span data-cut-label="bottom">下叠 · {78 - localCut}</span>
-      </div>
       <span className={styles.caption} aria-hidden="true">
         {gathering ? '合拢牌堆 · 准备发牌' : '在桌上左右拖动 · 或用滑块选择分界'}
       </span>

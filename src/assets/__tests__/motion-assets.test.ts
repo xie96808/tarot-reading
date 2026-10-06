@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
-import { MOTION, dealDurationMs } from '@/lib/motion';
+import { MOTION, dealDelayMs, dealDurationMs } from '@/lib/motion';
 
 describe('layered ritual assets and timing', () => {
   it.each(['webp', 'jpg'])('ships an optimized background with %s fallback', async format => {
@@ -51,13 +51,14 @@ describe('layered ritual assets and timing', () => {
     expect(css).toContain("data-hand-frame='riffle'");
   });
 
-  it('keeps the seal and final staggered flight onscreen until settled', () => {
-    expect(MOTION.shuffleMinCommitMs).toBeGreaterThanOrEqual(1700 + 7 * 12);
-    expect(dealDurationMs(10, false)).toBeGreaterThanOrEqual(MOTION.dealFlightMs + 9 * MOTION.dealGapCelticMs);
+  it('keeps gather inside the auto shuffle and does not clip the last dealt card', () => {
+    expect(MOTION.shuffleMinCommitMs).toBe(1600);
+    expect(MOTION.shuffleReleaseMs).toBeGreaterThanOrEqual(240);
+    expect(MOTION.shuffleReleaseMs).toBeLessThanOrEqual(360);
+    expect(dealDurationMs(10, false)).toBe(dealDelayMs(9, 10) + MOTION.dealFlightMs + 80);
     expect(MOTION.cutMs).toBeGreaterThanOrEqual(440);
-    expect(MOTION.dealFlightMs).toBeGreaterThanOrEqual(1200);
-    expect(MOTION.dealCapMs).toBeLessThanOrEqual(3200);
-    expect(MOTION.shuffleFrameMs).toBeGreaterThanOrEqual(700);
-    expect(MOTION.shuffleMinCommitMs).toBeGreaterThanOrEqual(2500);
+    expect(MOTION.cutMs).toBeLessThanOrEqual(520);
+    expect(MOTION.dealFlightMs).toBe(480);
+    expect(MOTION.flipMs).toBe(480);
   });
 });

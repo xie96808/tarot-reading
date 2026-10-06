@@ -33,9 +33,9 @@ test('three-card ritual reaches a readable result', async ({ page }) => {
   await page.getByRole('button', { name: '面对这个选择，我需要看清什么？' }).click();
   await expect(page.getByRole('textbox').first()).toHaveValue('面对这个选择，我需要看清什么？');
   await page.getByRole('button', { name: '开始洗牌' }).click();
-  await page.getByRole('button', { name: '为我洗牌' }).click();
-  await expect(page.getByRole('button', { name: '让牌落在桌上' })).toBeVisible({ timeout: 15_000 });
-  await page.getByRole('button', { name: '让牌落在桌上' }).click();
+  await page.getByRole('button', { name: '洗牌', exact: true }).click();
+  await expect(page.getByRole('button', { name: '确认切牌' })).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: '确认切牌' }).click();
   const revealNext = page.locator('main').locator('[data-reveal="primary"]');
   for (let i = 0; i < 3; i += 1) {
     await expect(revealNext).toBeVisible({ timeout: 8_000 });
@@ -60,5 +60,5 @@ test('an empty question can start a standard shuffle', async ({ page }) => {
   await expect(page.getByRole('button', { name: '开始洗牌' })).toBeEnabled();
   await expect(page.getByRole('button', { name: '这次不设问题' })).toHaveCount(0);
   await page.getByRole('button', { name: '开始洗牌' }).click();
-  await expect(page.getByRole('button', { name: '为我洗牌' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '洗牌', exact: true })).toBeVisible();
 });

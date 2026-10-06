@@ -2,20 +2,22 @@ export const MOTION = {
   enterMs: 320,
   shuffleCards: 16,
   shuffleLoopMs: 1600,
-  shuffleMinCommitMs: 2800,
-  /** Cadence for hold hand-frame + packet pose swaps (readable in screenshots). */
+  /** Auto shuffle, including gather. Crypto that runs longer keeps the real wait. */
+  shuffleMinCommitMs: 1600,
+  /** Cadence for hold hand-frame swaps. */
   shuffleFrameMs: 750,
-  cutMs: 560,
+  /** Release gathers from the live pose instead of replaying the auto timeline. */
+  shuffleReleaseMs: 300,
+  cutMs: 480,
   /** Cap of DOM edges; thickness also scales with real packet size via --stack-pct. */
   cutVisibleMax: 16,
-  dealFlightMs: 1200,
-  dealGapThreeMs: 280,
-  dealGapCelticMs: 140,
-  dealCapMs: 3200,
-  dealFanMs: 450,
-  flipMs: 640,
-  uprightPauseMs: 220,
-  uprightMs: 780,
+  dealFlightMs: 480,
+  dealGapThreeMs: 160,
+  dealGapCelticMs: 160,
+  dealFanMs: 0,
+  flipMs: 480,
+  uprightPauseMs: 80,
+  uprightMs: 250,
   readFadeMs: 420,
   seamLeadMs: 80,
   seamMs: 260,
@@ -40,16 +42,15 @@ export function dealGapMs(cardCount: number): number {
 }
 
 export function dealDelayMs(index: number, cardCount: number, reduced = false): number {
-  if (index < 0) return 0;
-  const fan = reduced ? 0 : MOTION.dealFanMs;
-  return fan + index * dealGapMs(cardCount);
+  if (index < 0 || reduced) return 0;
+  return index * dealGapMs(cardCount);
 }
 
+/** Ends when the last card has landed, plus a short settle. No cap clips the tail. */
 export function dealDurationMs(cardCount: number, reduced: boolean): number {
   if (reduced) return 0;
   const n = Math.max(1, cardCount);
-  const total = MOTION.dealFanMs + MOTION.dealFlightMs + dealGapMs(n) * (n - 1) + 160;
-  return Math.min(total, MOTION.dealCapMs);
+  return dealDelayMs(n - 1, n, false) + MOTION.dealFlightMs + 80;
 }
 
 export function shuffleCommitHoldMs(reduced: boolean): number {

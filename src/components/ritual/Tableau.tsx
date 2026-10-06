@@ -1,6 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { useReducedMotion } from '@/lib/browser-state';
 import { SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
 import { CARDS } from '@/data/lexicons/zh-1';
 import type { Draw } from '@/lib/shuffle';
@@ -60,7 +61,9 @@ export function Tableau({
       animate: revealed.includes(selectedPositionId) && !selection.revealed.includes(selectedPositionId) });
   }
   const board = useRef<HTMLDivElement>(null);
+  const stepRef = useRef<HTMLDivElement>(null);
   const desktop = useDesktopBoard();
+  const reduced = useReducedMotion();
   const [boardWidth, setBoardWidth] = useState(0);
   const [tableBox, setTableBox] = useState({ w: 0, h: 0 });
   useLayoutEffect(() => {
@@ -97,6 +100,25 @@ export function Tableau({
       card.style.animation = '';
     }
   }, [dealing, spreadId, boardWidth]);
+  useLayoutEffect(() => {
+    if (dealing || desktop || reduced) return;
+    const large = stepRef.current;
+    const thumb = board.current?.querySelector<HTMLElement>(`[data-overview="${selectedPositionId}"]`);
+    if (!large || !thumb) return;
+    const from = thumb.getBoundingClientRect();
+    const to = large.getBoundingClientRect();
+    if (!from.width || !to.width) return;
+    const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+    const dy = from.top + from.height / 2 - (to.top + to.height / 2);
+    const scale = Math.min(1, from.width / to.width);
+    large.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px) scale(${scale})` },
+        { transform: 'none' },
+      ],
+      { duration: 250, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'both' },
+    );
+  }, [selectedPositionId, dealing, desktop, reduced]);
 
   const spread = SPREADS[spreadId];
   const count = spread.positions.length;
@@ -117,11 +139,7 @@ export function Tableau({
     revealablePositionId === undefined || revealed.includes(positionId) || revealablePositionId === positionId;
 
   const stepped = (
-    <div key={selected.positionId} className={styles.step}>
-      <p>
-        {selectedMeta.nameZh} · {spread.positions.findIndex((p) => p.id === selected.positionId) + 1}/
-        {spread.positions.length}
-      </p>
+    <div key={selected.positionId} ref={stepRef} className={styles.step}>
       <Card3D
         key={`${selected.positionId}:${selected.cardId}`}
         revealed={selectedRevealed}
@@ -139,7 +157,6 @@ export function Tableau({
         alt={cardAlt(selected.positionId, selected.cardId, selected.orientation, selectedMeta.nameZh, selectedRevealed)}
         label={selectedMeta.nameZh}
         sceneInstant={sceneInstant?.[selected.positionId] === true}
-        onReveal={revealLocked || selectedRevealed || !onReveal || !canOpen(selected.positionId) ? undefined : () => onReveal(selected.positionId)}
       />
       <div className={styles.stepNav}>
         {spread.positions.map((position) => (
@@ -213,7 +230,6 @@ export function Tableau({
                     dealDelayMs={dealDelayMs(position.drawOrder - 1, count)}
                     alt={isRevealed ? `${CARDS[draw.cardId].nameZh} ${draw.orientation === 'reversed' ? COPY.reversed : COPY.upright}` : position.nameZh}
                     label={position.nameZh}
-                    onReveal={revealLocked || isRevealed || !onReveal || dealing || !canOpen(position.id) ? undefined : () => onReveal(position.id)}
                   />
                 </div>
               );
@@ -225,13 +241,11 @@ export function Tableau({
   }
 
   return (
-    <div ref={board} style={boardVars}>
-      {!dealing ? (
-        <div className={styles.mobileColumn}>
-          {stepped}
-        </div>
-      ) : null}
-      <div className={`${styles.row} ${dealing ? styles.dealingBoard : ''}`} role="list">
+    <div ref={board} className={dealing ? styles.dealingBoard : undefined} style={boardVars}>
+      <div className={styles.mobileColumn}>
+        {stepped}
+      </div>
+      <div className={styles.row} role="list">
         {spread.positions.map((position) => {
           const draw = draws.find((item) => item.positionId === position.id)!;
           const isRevealed = revealed.includes(position.id);
@@ -241,6 +255,7 @@ export function Tableau({
             <div
               key={position.id}
               role="listitem"
+              data-overview={position.id}
               className={`${styles.item} ${selectedPositionId === position.id ? styles.selected : ''}`}
             >
               {revealLocked || !canFocus(position.id) ? null : (
@@ -259,7 +274,8 @@ export function Tableau({
                 alt={cardAlt(position.id, draw.cardId, draw.orientation, position.nameZh, isRevealed)}
                 label={position.nameZh}
                 sceneInstant={sceneInstant?.[position.id] === true}
-                onReveal={revealLocked || isRevealed || !onReveal || !canOpen(position.id) ? undefined : () => onReveal(position.id)}
+                snapFace={!desktop}
+                uprightControl={desktop}
               />
             </div>
           );

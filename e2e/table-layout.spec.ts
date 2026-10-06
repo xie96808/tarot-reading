@@ -16,14 +16,14 @@ for (const width of [375, 390, 719, 720, 721, 768, 1023, 1024, 1440]) {
     expect(box!.height).toBeGreaterThanOrEqual(380);
     await expect.poll(() => photo.locator('[data-table-background]').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1600);
     expect(await photo.locator('[data-table-background]').evaluate((img) => getComputedStyle(img).transform)).toBe('none');
-    await page.getByRole('button', { name: '为我洗牌' }).click();
-    await expect(page.getByRole('button', { name: '让牌落在桌上' })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: '洗牌', exact: true }).click();
+    await expect(page.getByRole('button', { name: '确认切牌' })).toBeVisible({ timeout: 15000 });
     await expect(page.locator('[data-cut-packet]')).toHaveCount(2);
     await expect(page.locator('[data-cut-packet]').first()).toBeVisible();
-    await page.getByRole('button', { name: '让牌落在桌上' }).click();
+    await page.getByRole('button', { name: '确认切牌' }).click();
     const next = page.locator('main').locator('[data-reveal="primary"]');
     await expect(next).toBeVisible({ timeout: 10000 });
-    const scene = page.locator('[data-table-scene="spread"]');
+    const scene = page.locator('[data-table-scene="play"]');
     const cards = scene.locator('img:visible');
     // One background plus at least one interactive card, not an empty felt.
     expect(await cards.count()).toBeGreaterThan(1);
@@ -52,8 +52,8 @@ test('reduced motion, missing decorations, and enlarged reading text keep the re
   await page.route('**/share/parchment-strip.jpg', (route) => route.abort());
   await enter(page, true);
   await expect(page.locator('[data-table-scene="play"]')).toHaveAttribute('data-hand', 'none');
-  await page.getByRole('button', { name: '为我洗牌' }).click();
-  await page.getByRole('button', { name: '让牌落在桌上' }).click({ timeout: 15000 });
+  await page.getByRole('button', { name: '洗牌', exact: true }).click();
+  await page.getByRole('button', { name: '确认切牌' }).click({ timeout: 15000 });
   const next = page.locator('main').locator('[data-reveal="primary"]');
   for (let i = 0; i < 10; i++) await next.click();
   await page.addStyleTag({ content: 'article p { font-size: 34px; }' });
@@ -89,14 +89,14 @@ test('pointer shuffle animates the deck without moving the table', async ({ page
   expect(Math.abs(moved.x - held.x)).toBeLessThanOrEqual(1);
   expect(Math.abs(moved.y - held.y)).toBeLessThanOrEqual(1);
   await page.mouse.up();
-  await expect(page.getByRole('button', { name: '让牌落在桌上' })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('button', { name: '确认切牌' })).toBeVisible({ timeout: 15000 });
 });
 
 test('celtic right column controls do not overlap the next card', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1100 });
   await enter(page, true);
-  await page.getByRole('button', { name: '为我洗牌' }).click();
-  await page.getByRole('button', { name: '让牌落在桌上' }).click({ timeout: 15000 });
+  await page.getByRole('button', { name: '洗牌', exact: true }).click();
+  await page.getByRole('button', { name: '确认切牌' }).click({ timeout: 15000 });
   await expect(page.locator('main').locator('[data-reveal="primary"]')).toBeVisible({ timeout: 10000 });
   const items = page.locator('[data-table-scene="spread"] [role="listitem"]');
   const rects = [];

@@ -11,21 +11,20 @@ import {
 } from '@/lib/motion';
 
 describe('deal timing', () => {
-  it('uses fan + flight + stagger and stays under the celtic cap', () => {
-    expect(dealDurationMs(1, false)).toBe(MOTION.dealFanMs + MOTION.dealFlightMs + 160);
-    expect(dealDurationMs(3, false)).toBe(MOTION.dealFanMs + MOTION.dealFlightMs + MOTION.dealGapThreeMs * 2 + 160);
-    expect(dealDurationMs(10, false)).toBe(
-      Math.min(MOTION.dealFanMs + MOTION.dealFlightMs + MOTION.dealGapCelticMs * 9 + 160, MOTION.dealCapMs),
-    );
-    expect(MOTION.dealCapMs).toBeLessThanOrEqual(3200);
-    expect(dealDurationMs(10, false)).toBeLessThanOrEqual(MOTION.dealCapMs);
+  it('ends when the last card lands, plus a short settle', () => {
+    expect(MOTION.dealFlightMs).toBe(480);
+    expect(MOTION.dealGapThreeMs).toBe(160);
+    expect(dealDurationMs(1, false)).toBe(480 + 80);
+    expect(dealDurationMs(3, false)).toBe(160 * 2 + 480 + 80);
+    expect(dealDurationMs(10, false)).toBe(160 * 9 + 480 + 80);
+    expect(dealDurationMs(10, false)).toBe(dealDelayMs(9, 10) + MOTION.dealFlightMs + 80);
     expect(dealDurationMs(10, true)).toBe(0);
   });
 
-  it('staggers after a short fan lead, first card at fan Ms', () => {
-    expect(dealDelayMs(0, 3)).toBe(MOTION.dealFanMs);
-    expect(dealDelayMs(2, 3)).toBe(MOTION.dealFanMs + MOTION.dealGapThreeMs * 2);
-    expect(dealDelayMs(9, 10)).toBe(MOTION.dealFanMs + MOTION.dealGapCelticMs * 9);
+  it('starts the first card immediately and staggers the rest', () => {
+    expect(dealDelayMs(0, 3)).toBe(0);
+    expect(dealDelayMs(2, 3)).toBe(MOTION.dealGapThreeMs * 2);
+    expect(dealDelayMs(9, 10)).toBe(MOTION.dealGapCelticMs * 9);
     expect(dealDelayMs(0, 3, true)).toBe(0);
   });
 });

@@ -94,6 +94,7 @@
 }
 
 .mobileColumn {
+  display: none;
   width: 100%;
 }
 
@@ -104,8 +105,8 @@
 
 .step {
   display: none;
-  max-width: 170px;
-  margin: 0 auto 24px;
+  max-width: 156px;
+  margin: 0 auto 12px;
   text-align: center;
 }
 
@@ -141,39 +142,34 @@
 }
 
 @media (max-width: 1023px) {
-  .celtic:not(.dealLayout) {
-    display: none;
+  .row [data-part='label'] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
-
-  .step {
-    display: block;
-  }
-
+  .mobileColumn { display: block; }
+  .celtic:not(.dealLayout) { display: none; }
+  .step { display: block; }
   .row {
-    display: none;
-  }
-
-  .row.dealingBoard {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(40px, 52px));
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .dealingBoard .mobileColumn { display: none; }
+  .dealingBoard .row {
     grid-template-columns: repeat(auto-fit, minmax(72px, 96px));
     gap: 10px;
-    margin-bottom: 16px;
   }
-
-  .row.dealingBoard .item :global(button) {
-    display: none;
-  }
-
-  .celticWrap.dealingBoard .step {
-    display: none;
-  }
-
+  .dealingBoard .item :global(button),
   .celticWrap.dealingBoard .placed [data-part='reveal'],
-  .celticWrap.dealingBoard .hit {
-    display: none;
-  }
+  .celticWrap.dealingBoard .hit { display: none; }
+  .celticWrap.dealingBoard .step { display: none; }
 }
-
-.step { animation: stepArrive 320ms ease both; }
-@keyframes stepArrive { from { opacity: .45; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .step { animation: none; } }

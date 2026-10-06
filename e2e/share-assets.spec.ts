@@ -40,9 +40,9 @@ for (const spreadId of ['single', 'three', 'celtic'] as SpreadId[]) {
 test('copy-share button generates a working link and persists device history', async ({ page }) => {
   await page.goto('/read');
   await page.getByRole('button', { name: '开始洗牌' }).click();
-  await page.getByRole('button', { name: '为我洗牌' }).click();
-  await expect(page.getByRole('button', { name: '让牌落在桌上' })).toBeVisible({ timeout: 15_000 });
-  await page.getByRole('button', { name: '让牌落在桌上' }).click();
+  await page.getByRole('button', { name: '洗牌', exact: true }).click();
+  await expect(page.getByRole('button', { name: '确认切牌' })).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: '确认切牌' }).click();
   const revealNext = page.locator('main').locator('[data-reveal="primary"]');
   for (let i = 0; i < 3; i += 1) {
     await expect(revealNext).toBeVisible({ timeout: 8_000 });

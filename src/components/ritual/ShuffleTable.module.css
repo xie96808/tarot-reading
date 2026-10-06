@@ -23,16 +23,15 @@
 }
 .card img { box-shadow: none; border-radius: 3px; pointer-events: none; user-select: none; }
 
-/* Idle: soft breathe */
-.idle .card { animation: breathe 4.6s ease-in-out infinite alternate; transition: none; }
+/* Resting pile stays still. */
+.idle .card { animation: none; transition: none; }
 
-/* Hold pose driven by data-hand-frame — two clear packets, then interleave */
-.table[data-hand-frame='idle'] .card {
+.table[data-hand-frame='idle']:not([data-shuffle-motion='auto']) .card {
   animation: none;
   transition: none;
   transform: translate3d(calc(-50% + var(--fan) * 2px), calc(-50% - var(--layer) * 1px), 0) rotate(calc(var(--fan) * 1.2deg));
 }
-.table[data-hand-frame='split'] .card {
+.table[data-hand-frame='split']:not([data-shuffle-motion='auto']) .card {
   animation: none;
   transition: none;
   transform: translate3d(
@@ -42,7 +41,7 @@
     )
     rotate(calc(var(--side) * 18deg));
 }
-.table[data-hand-frame='riffle'] .card {
+.table[data-hand-frame='riffle']:not([data-shuffle-motion='auto']) .card {
   animation: none;
   transition: none;
   transform: translate3d(
@@ -53,24 +52,36 @@
     rotate(calc((var(--side) * 10deg) + (var(--pair) * 16deg)));
   z-index: calc(20 + var(--pair) * 8 + var(--layer));
 }
-.table[data-hand-frame='seal'] .card {
-  animation: seal 1700ms cubic-bezier(.4,0,.2,1) both;
-  animation-delay: calc(var(--layer) * 14ms);
+.table[data-shuffle-motion='auto'] .card {
+  animation: autoPlay 1600ms linear both;
   transition: none;
+}
+.table[data-shuffle-motion='release'] .card {
+  animation: none;
 }
 
 .halo { position: absolute; inset: 5% 10% 20%; border: 1px solid #dec48230; border-radius: 50%; opacity: .4; transform: scale(.9); z-index: 0; }
-.active .halo, .sealing .halo { animation: halo 1600ms ease-in-out infinite; }
+.active .halo, .sealing .halo { animation: none; }
 .caption { position: absolute; bottom: 0; left: 0; right: 0; color: #e9d8af; font-size: 13px; letter-spacing: .12em; text-align: center; pointer-events: none; z-index: 9; user-select: none; }
 
-@keyframes breathe {
-  to { transform: translate3d(calc(-50% + var(--fan) * 3.7px), calc(-50% - var(--layer) * 1px - 5px), 0) rotate(calc(var(--fan) * 2.1deg)); }
-}
-@keyframes seal {
-  0% { transform: translate3d(calc(-50% + var(--side) * 18px + var(--pair) * 28px), calc(-50% - var(--layer) * 3px - 30px), 0) rotate(calc(var(--side) * 8deg)); }
-  35% { transform: translate3d(calc(-50% + var(--side) * var(--riffle-gap) * 0.55), calc(-50% - var(--layer) * 2px - 10px), 0) rotate(calc(var(--side) * 12deg)); }
-  70% { transform: translate3d(calc(-50% + var(--side) * 8px), calc(-50% - var(--layer) * 1.5px), 0) rotate(calc(var(--side) * -2deg)); }
-  100% { transform: translate3d(-50%, calc(-50% - var(--i) * .6px), 0) rotate(0deg); }
+@keyframes autoPlay {
+  0%, 10% {
+    transform: translate3d(calc(-50% + var(--fan) * 2px), calc(-50% - var(--layer) * 1px), 0) rotate(calc(var(--fan) * 1.2deg));
+  }
+  28%, 42% {
+    transform: translate3d(calc(-50% + (var(--side) * var(--riffle-gap))), calc(-50% - var(--layer) * 2.2px - 6px), 0) rotate(calc(var(--side) * 18deg));
+  }
+  55%, 69% {
+    transform: translate3d(
+        calc(-50% + (var(--side) * 22px) + (var(--pair) * 36px)),
+        calc(-50% - var(--layer) * 3.5px - 40px - (var(--pair) * 10px)),
+        0
+      )
+      rotate(calc((var(--side) * 10deg) + (var(--pair) * 16deg)));
+  }
+  94%, 100% {
+    transform: translate3d(-50%, calc(-50% - var(--i) * 0.6px), 0) rotate(0deg);
+  }
 }
 @keyframes halo { 0%,100% { opacity: .15; transform: scale(.88); } 50% { opacity: .65; transform: scale(1.05); } }
 

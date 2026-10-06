@@ -10,10 +10,10 @@ import { buildPositionReadings, composeReading } from '@/lib/reading';
 import { abandonCopy } from '@/lib/ritual-copy';
 import { encodeReading } from '@/lib/reading-codec';
 import { commitShuffle, newOperationId, randomCutIndex } from '@/lib/ritual-effects';
-import { canResume, createSession, persistable, reduce, stepPositionId, type PauseAnswer, type RitualSession } from '@/lib/ritual-machine';
+import { canResume, createSession, persistable, reduce, type PauseAnswer, type RitualSession } from '@/lib/ritual-machine';
 import { SCENE_PAUSE_ENABLED } from '@/lib/scene';
 import { composeSceneClose, type PauseResolution } from '@/lib/scene-close';
-import { canFocusGatedPosition, nextGatedPosition } from '@/lib/pause';
+import { nextGatedPosition } from '@/lib/pause';
 import { lockedSceneVisual, meaningAfterPauseMs, pauseActionsReadyMs, sceneBeatDurations, type SceneVisual } from '@/lib/scene-beats';
 import { toSharePayload } from '@/lib/share-payload';
 import type { Draw } from '@/lib/shuffle';
@@ -21,7 +21,6 @@ import { clearSession, loadSession, pushHistory, saveSession, subscribeStorageSt
 import { decodeFace, faceSlotKey, forgetFaceDecode, loadFaceIndex, revealFaceSizes, subscribeFaceIndex, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
-import { faceUpRevealCount } from '@/lib/face-up-count';
 import { MOTION, cutProportion, dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
 import { tableHandMode, type CutHandFrame, type ShuffleHandFrame } from '@/lib/table-hands';
 import { CardBack } from './CardBack';
@@ -168,6 +167,28 @@ function PrepareForm({
   );
 }
 
+function CurrentCardCopy({
+  spreadId,
+  draws,
+  positionId,
+}: {
+  spreadId: SpreadId;
+  draws: Draw[];
+  positionId: string;
+}) {
+  const position = buildPositionReadings(spreadId, draws, CARDS).find((item) => item.positionId === positionId);
+  if (!position) return null;
+  return (
+    <div>
+      <h2>
+        {position.positionNameZh} · {position.nameZh} · {position.orientation === 'reversed' ? COPY.reversed : COPY.upright}
+      </h2>
+      {position.keywords.length > 0 ? <p>{position.keywords.join('、')}</p> : null}
+      <p>{position.meaning}</p>
+    </div>
+  );
+}
+
 function chapter(stage: RitualSession['stage']): string {
   if (stage === 'enter') return '入席';
   if (stage === 'question' || stage === 'spread') return '问心';
@@ -194,6 +215,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   const storageNote = useSyncExternalStore(subscribeStorageStatus, storageStatusSnapshot, serverStorageStatusSnapshot);
   const samples = useRef<PointerSample[]>([]);
   const holding = useRef(false);
+  const shuffleCommitKind = useRef<'auto' | 'release'>('auto');
   const pageHidden = usePageHidden();
   const reducedMotion = useReducedMotion();
   const [pendingResume, setPendingResume] = useState<RitualSession | null>(() => {
@@ -256,16 +278,28 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (state.stage !== 'shuffle') return;
-      if (event.code !== 'Space' || event.repeat) return;
-      event.preventDefault();
-      if (event.type === 'keydown' && !holding.current) {
-        holding.current = true;
-        samples.current = [];
-        dispatch({ type: 'HOLD_START', operationId: newOperationId() });
+      const el = event.target instanceof Element ? event.target : null;
+      const onPile = Boolean(el?.closest('[data-shuffle-pile]'));
+      if (event.code === 'Space') {
+        if (!onPile || event.repeat) return;
+        event.preventDefault();
+        if (event.type === 'keydown' && !holding.current && state.shufflePhase === 'idle') {
+          holding.current = true;
+          samples.current = [];
+          dispatch({ type: 'HOLD_START', operationId: newOperationId() });
+        }
+        if (event.type === 'keyup' && holding.current) {
+          holding.current = false;
+          shuffleCommitKind.current = 'release';
+          dispatch({ type: 'HOLD_RELEASE' });
+        }
+        return;
       }
-      if (event.type === 'keyup' && holding.current) {
-        holding.current = false;
-        dispatch({ type: 'HOLD_RELEASE' });
+      if (event.type === 'keydown' && event.key === 'Enter' && onPile && state.shufflePhase === 'idle') {
+        event.preventDefault();
+        samples.current = [];
+        shuffleCommitKind.current = 'auto';
+        dispatch({ type: 'AUTO_SHUFFLE', operationId: newOperationId() });
       }
     };
     window.addEventListener('keydown', onKey);
@@ -274,16 +308,21 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('keyup', onKey);
     };
-  }, [state.stage, dispatch]);
+  }, [state, dispatch]);
 
   useEffect(() => {
     const cancelHiddenHold = () => {
-      if (!document.hidden) return;
+      if (!document.hidden && document.hasFocus()) return;
+      if (!holding.current) return;
       holding.current = false;
       dispatch({ type: 'HOLD_CANCEL' });
     };
     document.addEventListener('visibilitychange', cancelHiddenHold);
-    return () => document.removeEventListener('visibilitychange', cancelHiddenHold);
+    window.addEventListener('blur', cancelHiddenHold);
+    return () => {
+      document.removeEventListener('visibilitychange', cancelHiddenHold);
+      window.removeEventListener('blur', cancelHiddenHold);
+    };
   }, [dispatch]);
 
   const shufflePhase = state.stage === 'shuffle' ? state.shufflePhase : null;
@@ -297,7 +336,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     const sessionId = state.sessionId;
     const operationId = shuffleOperationId;
     let cancelled = false;
-    const holdMs = shuffleCommitHoldMs(prefersReducedMotion());
+    const holdMs = shuffleCommitKind.current === 'release' ? 0 : shuffleCommitHoldMs(prefersReducedMotion());
     Promise.all([commitShuffle(samples.current, shuffleReversals), sleep(holdMs)])
       .then(([result]) => {
         if (cancelled) return;
@@ -428,18 +467,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               Boolean(openedAtResume?.has(positionId)),
           ]),
         );
-  const faceUpCount =
-    'revealed' in state
-      ? faceUpRevealCount(
-          {
-            stage: state.stage,
-            revealed: state.revealed,
-            pause: 'pause' in state ? state.pause : null,
-          },
-          sceneVisuals,
-        )
-      : 0;
-
   const pauseDraw = pause && 'draws' in state ? state.draws.find((draw) => draw.positionId === pause.positionId) : undefined;
   const pauseFaceReady = !pauseDraw || faceReady(pauseDraw.positionId);
   const pauseFaceKey = pauseDraw ? faces.get(pauseDraw.cardId) : undefined;
@@ -565,9 +592,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
         {chapter(state.stage)}
       </h2>
       <p className="visually-hidden" aria-live="polite">
-        {state.stage === 'reveal' && 'revealed' in state
-          ? `已翻开 ${faceUpCount} / ${state.draws.length}`
-          : chapter(state.stage)}
+        {state.stage === 'reveal' ? '' : chapter(state.stage)}
       </p>
       {faceLoadError ? <div className={styles.warn} role="alert">
         <p>牌面资源暂未就绪，请检查网络后重试。</p>
@@ -666,173 +691,222 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
         </section>
       ) : null}
 
-      {state.stage === 'shuffle' ? (
-        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`} data-ritual-stage="shuffle">
-          <h1>{COPY.shuffleTitle}</h1>
-          <p>{state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}</p>
-          <TableScene
-            paused={pageHidden}
-            hand={tableHandMode({
-              stage: 'shuffle',
-              shufflePhase: state.shufflePhase,
-              reduced: reducedMotion || pageHidden,
-              shuffleFrame: shuffleHandFrameState,
-            })}
-            label={state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}
-            onPointerDown={(event) => {
-              event.preventDefault();
-              holding.current = true;
-              samples.current = [];
-              (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-              dispatch({ type: 'HOLD_START', operationId: newOperationId() });
-            }}
-            onPointerMove={(event) => {
-              if (!holding.current) return;
-              event.preventDefault();
-              samples.current.push({ x: event.clientX, y: event.clientY, t: performance.now() });
-              dispatch({ type: 'HOLD_SAMPLE' });
-            }}
-            onPointerUp={() => {
-              if (!holding.current) return;
-              holding.current = false;
-              dispatch({ type: 'HOLD_RELEASE' });
-            }}
-            onPointerCancel={() => {
-              holding.current = false;
-              dispatch({ type: 'HOLD_CANCEL' });
-            }}
-          >
-            <ShuffleTable
-              phase={state.shufflePhase}
-              paused={pageHidden}
-              reduced={reducedMotion}
-              onHandFrame={setShuffleHandFrameState}
-            />
-          </TableScene>
-          <button
-            type="button"
-            className={styles.primary}
-            disabled={state.shufflePhase === 'committing'}
-            onClick={() => {
-              samples.current = [];
-              dispatch({ type: 'AUTO_SHUFFLE', operationId: newOperationId() });
-            }}
-          >
-            {COPY.shuffleAuto}
-          </button>
-          {state.shufflePhase === 'idle' ? (
-            <button type="button" className={styles.ghost} onClick={() => dispatch({ type: 'BACK' })}>
-              {COPY.backToSpread}
-            </button>
-          ) : null}
-        </section>
-      ) : null}
-
-      {state.stage === 'cut' ? (
-        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`} data-ritual-stage="cut">
-          <h1>{COPY.cutTitle}</h1>
-          <p>{COPY.shuffleSealed}</p>
-          <TableScene
-            paused={pageHidden}
-            hand={tableHandMode({ stage: 'cut', reduced: reducedMotion, cutFrame: cutHandFrameState })}
-            label={COPY.cutTitle}
-          >
-            <CutTable
-              cutIndex={state.cutIndex}
-              gathering={cutCommitSession === state.sessionId}
-              reduced={reducedMotion}
-              disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
-              onCutChange={(cutIndex) => dispatch({ type: 'SET_CUT', cutIndex })}
-              onHandFrame={setCutHandFrameState}
-            />
-          </TableScene>
-          <label>
-            {COPY.cutHint(state.cutIndex)}
-            <input
-              type="range"
-              className={styles.slider}
-              min={1}
-              max={77}
-              step={1}
-              value={state.cutIndex}
-              disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
-              onChange={(event) => dispatch({ type: 'SET_CUT', cutIndex: Number(event.target.value) })}
-            />
-          </label>
-          <p data-cut-top={cutProportion(state.cutIndex)?.top} data-cut-bottom={cutProportion(state.cutIndex)?.bottom}>
-            上方 {state.cutIndex} 张 · 下方 {78 - state.cutIndex} 张
-          </p>
-          <button
-            type="button"
-            className={styles.ghost}
-            disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
-            onClick={async () => {
-              const operationId = newOperationId();
-              dispatch({ type: 'AUTO_CUT_REQUEST', operationId });
-              try {
-                const cutIndex = await randomCutIndex();
-                dispatch({ type: 'AUTO_CUT_DONE', sessionId: state.sessionId, operationId, cutIndex });
-              } catch {
-                dispatch({ type: 'AUTO_CUT_FAILED', sessionId: state.sessionId, operationId });
-              }
-            }}
-          >
-            {COPY.cutAuto}
-          </button>
-          <button
-            type="button"
-            className={styles.primary}
-            disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
-            onClick={() => setCutCommitSession(state.sessionId)}
-          >
-            {COPY.cutConfirm}
-          </button>
-          <details>
-            <summary>{COPY.sealedFingerprint}</summary>
-            <p className={styles.muted}>{state.commitShort}</p>
-            <code style={{ fontSize: 13, wordBreak: 'break-all' }}>{state.commitFull}</code>
-            <p className={styles.muted}>只检查本标签页牌序是否自洽，不是公证。</p>
-          </details>
-        </section>
-      ) : null}
-
-      {state.stage === 'deal' || state.stage === 'reveal' || state.stage === 'read' ? (
+      {state.stage === 'shuffle' || state.stage === 'cut' || state.stage === 'deal' || state.stage === 'reveal' || state.stage === 'read' ? (
         <section
-          className={`${styles.stage} ${styles.tableStage}`}
-          data-ritual-stage={state.stage === 'read' ? 'read' : state.stage}
+          className={`${state.stage === 'shuffle' || state.stage === 'cut' ? `${styles.center} ` : ''}${styles.stage} ${styles.tableStage}`}
+          data-ritual-stage={state.stage}
         >
+          {state.stage === 'shuffle' ? (
+            <>
+              <h1>{COPY.shuffleTitle}</h1>
+              <p>{state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}</p>
+            </>
+          ) : null}
+          {state.stage === 'cut' ? (
+            <>
+              <h1>{COPY.cutTitle}</h1>
+              <p>{COPY.shuffleSealed}</p>
+            </>
+          ) : null}
           {state.stage === 'deal' ? <p className={styles.dealHint}>牌正在落到桌上</p> : null}
           <div className={state.stage === 'read' && state.view === 'page' ? styles.tableParked : undefined}>
             <TableScene
               paused={pageHidden}
-              hand={tableHandMode({ stage: state.stage, reduced: reducedMotion })}
-              layout="spread"
-            >
-              {state.stage === 'deal' ? (
-                <div className={styles.dealSource} data-deck-origin aria-hidden="true">
-                  <CardBack alt="" />
-                </div>
-              ) : null}
-              <Tableau
-                spreadId={state.spreadId}
-                draws={state.draws}
-                revealed={state.revealed}
-                selectedPositionId={state.selectedPositionId}
-                faces={faces}
-                dealing={state.stage === 'deal'}
-                sceneVisuals={sceneVisuals}
-                sceneInstant={sceneInstant}
-                revealLocked={navigationLocked}
-                revealablePositionId={sceneLive ? gatedNext ?? '' : undefined}
-                onSelect={(positionId) => dispatch({ type: 'SELECT_POSITION', positionId })}
-                onReveal={
-                  state.stage === 'reveal' && !navigationLocked
-                    ? (positionId) => dispatch({ type: 'REVEAL_POSITION', positionId })
+              hand={
+                state.stage === 'shuffle'
+                  ? tableHandMode({
+                      stage: 'shuffle',
+                      shufflePhase: state.shufflePhase,
+                      reduced: reducedMotion || pageHidden,
+                      shuffleFrame: shuffleHandFrameState,
+                    })
+                  : state.stage === 'cut'
+                    ? tableHandMode({ stage: 'cut', reduced: reducedMotion, cutFrame: cutHandFrameState })
+                    : tableHandMode({ stage: state.stage, reduced: reducedMotion })
+              }
+              label={
+                state.stage === 'shuffle'
+                  ? state.shufflePhase === 'committing'
+                    ? COPY.shuffleCommitting
+                    : COPY.shuffleHold
+                  : state.stage === 'cut'
+                    ? COPY.cutTitle
                     : undefined
-                }
-              />
+              }
+              layout={
+                (state.stage === 'deal' || state.stage === 'reveal' || state.stage === 'read') && state.spreadId === 'celtic'
+                  ? 'spread'
+                  : 'play'
+              }
+              onPointerDown={
+                state.stage === 'shuffle'
+                  ? (event) => {
+                      event.preventDefault();
+                      holding.current = true;
+                      samples.current = [];
+                      (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+                      dispatch({ type: 'HOLD_START', operationId: newOperationId() });
+                    }
+                  : undefined
+              }
+              onPointerMove={
+                state.stage === 'shuffle'
+                  ? (event) => {
+                      if (!holding.current) return;
+                      event.preventDefault();
+                      samples.current.push({ x: event.clientX, y: event.clientY, t: performance.now() });
+                      dispatch({ type: 'HOLD_SAMPLE' });
+                    }
+                  : undefined
+              }
+              onPointerUp={
+                state.stage === 'shuffle'
+                  ? () => {
+                      if (!holding.current) return;
+                      holding.current = false;
+                      shuffleCommitKind.current = 'release';
+                      dispatch({ type: 'HOLD_RELEASE' });
+                    }
+                  : undefined
+              }
+              onPointerCancel={
+                state.stage === 'shuffle'
+                  ? () => {
+                      holding.current = false;
+                      dispatch({ type: 'HOLD_CANCEL' });
+                    }
+                  : undefined
+              }
+              onBlur={
+                state.stage === 'shuffle'
+                  ? () => {
+                      if (!holding.current) return;
+                      holding.current = false;
+                      dispatch({ type: 'HOLD_CANCEL' });
+                    }
+                  : undefined
+              }
+            >
+              {state.stage === 'shuffle' ? (
+                <ShuffleTable
+                  phase={state.shufflePhase}
+                  paused={pageHidden}
+                  reduced={reducedMotion}
+                  onHandFrame={setShuffleHandFrameState}
+                />
+              ) : null}
+              {state.stage === 'cut' ? (
+                <CutTable
+                  cutIndex={state.cutIndex}
+                  gathering={cutCommitSession === state.sessionId}
+                  reduced={reducedMotion}
+                  disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
+                  onCutChange={(cutIndex) => dispatch({ type: 'SET_CUT', cutIndex })}
+                  onHandFrame={setCutHandFrameState}
+                />
+              ) : null}
+              {state.stage === 'deal' || state.stage === 'reveal' || state.stage === 'read' ? (
+                <>
+                  {state.stage === 'deal' ? (
+                    <div className={styles.dealSource} data-deck-origin aria-hidden="true">
+                      <CardBack alt="" />
+                    </div>
+                  ) : null}
+                  <Tableau
+                    spreadId={state.spreadId}
+                    draws={state.draws}
+                    revealed={state.revealed}
+                    selectedPositionId={state.selectedPositionId}
+                    faces={faces}
+                    dealing={state.stage === 'deal'}
+                    sceneVisuals={sceneVisuals}
+                    sceneInstant={sceneInstant}
+                    revealLocked={navigationLocked}
+                    revealablePositionId={sceneLive ? gatedNext ?? '' : undefined}
+                    onSelect={(positionId) => dispatch({ type: 'SELECT_POSITION', positionId })}
+                    onReveal={
+                      state.stage === 'reveal' && !navigationLocked
+                        ? (positionId) => dispatch({ type: 'REVEAL_POSITION', positionId })
+                        : undefined
+                    }
+                  />
+                </>
+              ) : null}
             </TableScene>
           </div>
+          {state.stage === 'shuffle' ? (
+            <>
+              <button
+                type="button"
+                className={styles.primary}
+                data-shuffle-auto
+                disabled={state.shufflePhase === 'committing'}
+                onClick={() => {
+                  samples.current = [];
+                  shuffleCommitKind.current = 'auto';
+                  dispatch({ type: 'AUTO_SHUFFLE', operationId: newOperationId() });
+                }}
+              >
+                {state.shufflePhase === 'committing' ? COPY.shuffleBusy : COPY.shuffleAuto}
+              </button>
+              {state.shufflePhase === 'idle' ? (
+                <button type="button" className={styles.ghost} onClick={() => dispatch({ type: 'BACK' })}>
+                  {COPY.backToSpread}
+                </button>
+              ) : null}
+            </>
+          ) : null}
+          {state.stage === 'cut' ? (
+            <>
+              <label>
+                {COPY.cutHint(state.cutIndex)}
+                <input
+                  type="range"
+                  className={styles.slider}
+                  min={1}
+                  max={77}
+                  step={1}
+                  value={state.cutIndex}
+                  disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
+                  onChange={(event) => dispatch({ type: 'SET_CUT', cutIndex: Number(event.target.value) })}
+                />
+              </label>
+              <p data-cut-count data-cut-top={cutProportion(state.cutIndex)?.top} data-cut-bottom={cutProportion(state.cutIndex)?.bottom}>
+                上方 {state.cutIndex} 张 / 下方 {78 - state.cutIndex} 张
+              </p>
+              <button
+                type="button"
+                className={styles.ghost}
+                disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
+                onClick={async () => {
+                  const operationId = newOperationId();
+                  dispatch({ type: 'AUTO_CUT_REQUEST', operationId });
+                  try {
+                    const cutIndex = await randomCutIndex();
+                    dispatch({ type: 'AUTO_CUT_DONE', sessionId: state.sessionId, operationId, cutIndex });
+                  } catch {
+                    dispatch({ type: 'AUTO_CUT_FAILED', sessionId: state.sessionId, operationId });
+                  }
+                }}
+              >
+                {COPY.cutAuto}
+              </button>
+              <button
+                type="button"
+                className={styles.primary}
+                disabled={Boolean(state.operationId) || cutCommitSession === state.sessionId}
+                onClick={() => setCutCommitSession(state.sessionId)}
+              >
+                {COPY.cutConfirm}
+              </button>
+              <details>
+                <summary>{COPY.sealedFingerprint}</summary>
+                <p className={styles.muted}>{state.commitShort}</p>
+                <code style={{ fontSize: 13, wordBreak: 'break-all' }}>{state.commitFull}</code>
+                <p className={styles.muted}>只检查本标签页牌序是否自洽，不是公证。</p>
+              </details>
+            </>
+          ) : null}
           {SCENE_PAUSE_ENABLED && pause && pauseOffer && sceneId ? (
             <PauseSheet
               sceneId={sceneId}
@@ -870,9 +944,16 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
           ) : null}
           {state.stage === 'reveal' ? (
             <div className={styles.center}>
-              <p className={styles.revealProgress} data-reveal-count={faceUpCount} aria-live="polite">
-                {`已翻开 ${faceUpCount} / ${state.draws.length}`}
+              <p className={styles.revealProgress} data-reveal-count={SPREADS[state.spreadId].positions.find((position) => position.id === state.selectedPositionId)?.drawOrder ?? 1} aria-live="polite">
+                {COPY.revealProgress(
+                  SPREADS[state.spreadId].positions.find((position) => position.id === state.selectedPositionId)?.drawOrder ?? 1,
+                  state.draws.length,
+                )}
               </p>
+              {state.revealed.length === 0 && state.draws.length > 1 ? <p>{COPY.revealCue}</p> : null}
+              {state.revealed.includes(state.selectedPositionId) && !pause ? (
+                <CurrentCardCopy spreadId={state.spreadId} draws={state.draws} positionId={state.selectedPositionId} />
+              ) : null}
               <p className={styles.muted}>{COPY.reversedHint}</p>
               <div className={styles.revealBar}>
                 {state.revealed.length < state.draws.length && !pause && !futureOpen ? (
@@ -882,13 +963,13 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                     data-reveal="primary"
                     onClick={() => dispatch({ type: 'REVEAL_NEXT' })}
                   >
-                    {gatedNext || !state.revealed.includes(state.selectedPositionId)
-                      ? COPY.revealSelected(
-                          (gatedNext
-                            ? SPREADS.three.positions.find((position) => position.id === gatedNext)?.nameZh
-                            : SPREADS[state.spreadId].positions.find((position) => position.id === state.selectedPositionId)?.nameZh) ?? '',
-                        )
-                      : COPY.revealNextClosed}
+                    {COPY.revealPrimary(
+                      state.revealed.includes(state.selectedPositionId)
+                        ? state.revealed.length + 1
+                        : SPREADS[state.spreadId].positions.find((position) => position.id === (gatedNext || state.selectedPositionId))?.drawOrder ?? 1,
+                      state.draws.length,
+                      state.revealed.includes(state.selectedPositionId),
+                    )}
                   </button>
                 ) : null}
                 {pause ? (
@@ -904,30 +985,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                   />
                 ) : null}
               </div>
-              <button
-                type="button"
-                className={styles.ghost}
-                disabled={
-                  navigationLocked ||
-                  stepPositionId(state.spreadId, state.selectedPositionId, -1) === state.selectedPositionId ||
-                  (sceneLive && revealState ? !canFocusGatedPosition(revealState, stepPositionId(state.spreadId, state.selectedPositionId, -1)) : false)
-                }
-                onClick={() => dispatch({ type: 'STEP_SELECTION', delta: -1 })}
-              >
-                {COPY.stepPrev}
-              </button>
-              <button
-                type="button"
-                className={styles.ghost}
-                disabled={
-                  navigationLocked ||
-                  stepPositionId(state.spreadId, state.selectedPositionId, 1) === state.selectedPositionId ||
-                  (sceneLive && revealState ? !canFocusGatedPosition(revealState, stepPositionId(state.spreadId, state.selectedPositionId, 1)) : false)
-                }
-                onClick={() => dispatch({ type: 'STEP_SELECTION', delta: 1 })}
-              >
-                {COPY.stepNext}
-              </button>
             </div>
           ) : null}
           {state.stage === 'read' && reading ? (
@@ -960,7 +1017,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               ) : null}
               <div className={`${styles.center} ${styles.noteBlock}`}>
                 <label className={styles.noteLabel}>
-                  留笺
+                  {COPY.noteTitle}
                   <textarea
                     className={styles.field}
                     value={state.note}

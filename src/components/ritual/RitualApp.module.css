@@ -386,17 +386,12 @@
 .dealSource {
   position: absolute;
   left: 50%;
-  top: -72px;
-  width: 56px;
-  margin-left: -28px;
+  top: 44%;
+  width: clamp(86px, 20vw, 124px);
   z-index: 3;
-  opacity: .88;
+  transform: translate(-50%, -50%);
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45));
-  animation: dealOriginPulse 720ms ease-out both;
-}
-@keyframes dealOriginPulse {
-  from { opacity: 0; transform: translateY(8px) scale(0.85); }
-  to { opacity: .88; transform: none; }
+  pointer-events: none;
 }
 .revealProgress {
   margin: 0;

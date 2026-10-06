@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type CSSProperties, type PointerEventHandler, type ReactNode } from 'react';
+import { useState, type PointerEventHandler, type ReactNode } from 'react';
 import type { TableHandMode } from '@/lib/table-hands';
 import styles from './TableScene.module.css';
 
@@ -11,6 +11,7 @@ type TableSceneProps = {
   onPointerMove?: PointerEventHandler<HTMLDivElement>;
   onPointerUp?: PointerEventHandler<HTMLDivElement>;
   onPointerCancel?: PointerEventHandler<HTMLDivElement>;
+  onBlur?: () => void;
   label?: string;
   layout?: 'play' | 'spread';
   paused?: boolean;
@@ -24,6 +25,7 @@ export function TableScene({
   onPointerMove,
   onPointerUp,
   onPointerCancel,
+  onBlur,
   label,
   layout = 'play',
   paused = false,
@@ -40,6 +42,7 @@ export function TableScene({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
+      onBlur={onBlur}
       aria-label={label}
       role={layout === 'play' ? 'img' : undefined}
     >
@@ -70,11 +73,6 @@ export function TableScene({
         />
       </div>
       <div className={styles.light} aria-hidden="true" />
-      <div className={styles.motes} aria-hidden="true">
-        {Array.from({ length: 6 }, (_, i) => (
-          <i key={i} style={{ '--m': i } as CSSProperties} />
-        ))}
-      </div>
       <span className={styles.inscription} aria-hidden="true">
         ✦ &nbsp; 烛下 · 此刻 &nbsp; ✦
       </span>

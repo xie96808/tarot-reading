@@ -17,7 +17,7 @@
   scroll-margin-top: 12px;
   scroll-margin-bottom: 24px;
 }
-.play { aspect-ratio: 16 / 10; min-height: 380px; overflow: hidden; }
+.play { aspect-ratio: auto; height: 440px; min-height: 400px; overflow: hidden; }
 .grab { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .grab:active { cursor: grabbing; }
 .surface { position: absolute; inset: 0; z-index: -3; overflow: hidden; border-radius: inherit; pointer-events: none; }
@@ -47,7 +47,6 @@
 
 .light { position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
   background: radial-gradient(ellipse at 12% 0, #ffd68526, transparent 58%);
-  animation: candlelight 5s ease-in-out infinite alternate;
 }
 .inscription { position: absolute; top: 8%; left: 0; right: 0; text-align: center; font-size: 12px; letter-spacing: .26em; color: #decfa486; pointer-events: none; }
 .content { position: relative; min-width: 0; width: 100%; z-index: 1; }
@@ -63,9 +62,14 @@
 @keyframes candlelight { from { opacity: .5; } to { opacity: 1; } }
 @keyframes drift { 0%,100% { opacity: 0; transform: translate3d(0, 0, 0); } 35% { opacity: .4; } 80% { opacity: 0; transform: translate3d(12px, -140px, 0); } }
 .scene[data-paused='true'] *, .scene[data-paused='true'] *::before, .scene[data-paused='true'] *::after { animation-play-state: paused !important; }
-@media (max-width: 1023px) { .spread { min-height: 0; padding: 24px 16px 20px; } }
+@media (max-width: 1023px) {
+  .spread { min-height: 0; padding: 24px 16px 20px; }
+  .play { height: 600px; min-height: 400px; }
+  .play .content { inset: 4% 4% 4%; width: 92%; }
+}
 @media (max-width: 600px) {
-  .play { aspect-ratio: auto; height: 400px; }
+  .play { height: 600px; min-height: 400px; }
+  .play .content { inset: 4% 4% 4%; width: 92%; }
   .mat { inset: 10% 4%; border-radius: 42%; }
   .spread .mat { border-radius: 70px; inset-inline: 8px; }
 }

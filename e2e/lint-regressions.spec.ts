@@ -21,7 +21,7 @@ test('storage write failure shows a fallback notice without a render loop', asyn
   await page.goto('/read');
   await expect(page.getByText('本次仅在当前页面保留', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '开始洗牌' }).click();
-  await expect(page.getByRole('button', { name: '为我洗牌' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '洗牌', exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -29,14 +29,15 @@ test('visibility event cancels a held shuffle immediately', async ({ page }) => 
   await page.goto('/read');
   await page.getByRole('button', { name: '开始洗牌' }).click();
   const scene = page.locator('[data-table-scene="play"]');
+  await page.locator('[data-shuffle-pile]').focus();
   await page.keyboard.down('Space');
-  await expect(scene).toHaveAttribute('data-hand', 'riffle');
+  await expect(scene).not.toHaveAttribute('data-hand', 'idle');
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   await expect(scene).toHaveAttribute('data-hand', 'none');
   await page.keyboard.up('Space');
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
   await expect(scene).toHaveAttribute('data-hand', 'idle');
-  await expect(page.getByRole('button', { name: '为我洗牌' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '洗牌', exact: true })).toBeEnabled();
 });
 
 test('manual reversed orientation survives timers and does not leak to another position', async ({ page }) => {
@@ -52,18 +53,19 @@ test('manual reversed orientation survives timers and does not leak to another p
   })), sessionKey);
   await page.goto('/read');
   await page.getByRole('button', { name: '继续这局', exact: true }).click();
-  const scene = page.locator('[data-table-scene="spread"]');
-  await expect(scene.getByRole('button', { name: '转正看图' })).toBeVisible();
-  await scene.getByRole('button', { name: '转正看图' }).click();
+  const scene = page.locator('[data-table-scene="play"]');
+  const current = scene.locator('[class*="step"]');
+  await expect(current.getByRole('button', { name: '转正看图' })).toBeVisible();
+  await current.getByRole('button', { name: '转正看图' }).click();
   await page.waitForTimeout(1000);
-  await expect(scene.getByRole('button', { name: '看落牌方向' })).toBeVisible();
+  await expect(current.getByRole('button', { name: '看落牌方向' })).toBeVisible();
   await scene.getByRole('button', { name: '2 现在', exact: true }).click();
-  await expect(scene.getByRole('button', { name: '转正看图' })).toBeVisible();
+  await expect(current.getByRole('button', { name: '转正看图' })).toBeVisible();
+  await expect(current.getByRole('button', { name: '看落牌方向' })).toHaveCount(0);
   await scene.getByRole('button', { name: '3 未来', exact: true }).click();
   await page.locator('main').locator('[data-reveal="primary"]').click();
-  await expect(scene.getByRole('button', { name: '转正看图' })).toBeVisible();
-  const flipped = scene.locator('[class*="inner"][class*="revealed"]:visible');
-  await expect(flipped).toHaveCount(1);
+  await expect(current.getByRole('button', { name: '转正看图' })).toBeVisible();
+  await expect(current.locator('[class*="inner"][class*="revealed"]:visible')).toHaveCount(1);
 });
 
 test('history subscribes to local deletion and cross-tab clearing', async ({ page, context }) => {
