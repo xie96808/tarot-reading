@@ -1,12 +1,19 @@
-.scene {
-  position: relative;
-  isolation: isolate;
+.frame {
   width: min(100%, 920px);
   min-width: 0;
   margin-inline: auto;
   border-radius: 12px;
+  box-shadow: 0 24px 60px #0007;
+}
+.scene {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-width: 0;
+  overflow: clip;
+  border-radius: inherit;
   background: #20150f;
-  box-shadow: 0 24px 60px #0007, inset 0 0 0 1px #e7c27822;
+  box-shadow: inset 0 0 0 1px #e7c27822;
 }
 .play { aspect-ratio: 16 / 10; min-height: 380px; overflow: hidden; }
 .grab { cursor: grab; touch-action: pan-y; user-select: none; }
@@ -44,7 +51,7 @@
 @keyframes candlelight { from { opacity: .5; } to { opacity: 1; } }
 @keyframes drift { 0%,100% { opacity: 0; transform: translate3d(0, 0, 0); } 35% { opacity: .4; } 80% { opacity: 0; transform: translate3d(12px, -140px, 0); } }
 .scene[data-paused='true'] *, .scene[data-paused='true'] *::before, .scene[data-paused='true'] *::after { animation-play-state: paused !important; }
-@media (max-width: 1023px) { .spread { padding: 72px 24px 48px; } }
+@media (max-width: 1023px) { .spread { min-height: 0; padding: 24px 16px 20px; } }
 @media (max-width: 600px) {
   .play { aspect-ratio: auto; height: 400px; }
   .mat { inset: 10% 4%; border-radius: 42%; }

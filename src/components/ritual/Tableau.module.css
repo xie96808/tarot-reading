@@ -102,14 +102,6 @@
   z-index: 1;
 }
 
-.desktopPause {
-  position: relative;
-  z-index: 0;
-  width: 100%;
-  max-width: 36rem;
-  margin: var(--space-5) auto 0;
-}
-
 .step {
   display: none;
   max-width: 170px;

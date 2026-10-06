@@ -72,11 +72,14 @@ export function validateDoorOffers(
         failures.push(`${where}: pause 1 prompt must not contain ${AFTER_ACTION}`);
       }
     } else {
-      if (!offer.promptAfterActionZh.includes(AFTER_ACTION)) {
-        failures.push(`${where}: pause 2 action prompt must contain ${AFTER_ACTION}`);
+      if (offer.promptAfterActionZh.includes(AFTER_ACTION)) {
+        failures.push(`${where}: pause 2 action prompt must not contain ${AFTER_ACTION}`);
       }
-      if (!offer.promptAfterSkipZh.includes(AFTER_SKIP)) {
-        failures.push(`${where}: pause 2 skip prompt must contain ${AFTER_SKIP}`);
+      if (offer.promptAfterActionZh.includes(AFTER_SKIP)) {
+        failures.push(`${where}: pause 2 action prompt must not contain ${AFTER_SKIP}`);
+      }
+      if (offer.promptAfterSkipZh.includes(AFTER_SKIP)) {
+        failures.push(`${where}: pause 2 skip prompt must not contain ${AFTER_SKIP}`);
       }
       if (offer.promptAfterSkipZh.includes(AFTER_ACTION)) {
         failures.push(`${where}: pause 2 skip prompt must not contain ${AFTER_ACTION}`);

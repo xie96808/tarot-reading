@@ -232,10 +232,11 @@ describe('pause gates', () => {
     expect(offer).not.toBeNull();
     if (!offer) return;
     const prompt = promptForPause(offer, 'missing');
-    expect(prompt).toBe('刚才你没有点。门又开了一线。两只杯在同一高度。你要怎么待这次交换？');
+    expect(prompt).toBe('门又开了一线。两只杯在同一高度。你要怎么待这次交换？');
+    expect(prompt).not.toContain('刚才你没有点');
     expect(prompt).not.toContain('沿着刚才那一步');
     expect(promptForPause(offer, 'skip')).toBe(prompt);
-    expect(promptForPause(offer, 'action')).toContain('沿着刚才那一步');
+    expect(promptForPause(offer, 'action')).toBe(prompt);
   });
 
   it('keeps a partial reveal and promotes a fully revealed one', () => {

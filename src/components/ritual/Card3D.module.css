@@ -222,13 +222,13 @@
   transition-delay: calc(var(--seam-lead-ms, 0ms) + var(--seam-ms, 0ms));
 }
 
-.inner[data-pose='full'][data-scene-from='door-partial'] {
+[data-scene-from='door-partial'] .inner[data-pose='full'] {
   transform: rotateY(180deg);
   transition: transform var(--complete-ms, 0ms) cubic-bezier(0.2, 0.75, 0.2, 1);
   transition-delay: 0s;
 }
 
-.inner[data-pose='full'][data-scene-from='back'] {
+[data-scene-from='back'] .inner[data-pose='full'] {
   transform: rotateY(180deg);
   transition: transform var(--partial-flip-ms, 0ms) cubic-bezier(0.2, 0.75, 0.2, 1);
   transition-delay: var(--seam-ms, 0ms);

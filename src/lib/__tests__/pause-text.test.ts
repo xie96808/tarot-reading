@@ -214,8 +214,8 @@ describe('pause text', () => {
         cardId: 'cups_02',
         orientation: 'upright',
         pauseIndex: 2,
-        promptAfterActionZh: '沿着刚才那一步，门又开了一线。两只杯在同一高度。你要怎么待这次交换？',
-        promptAfterSkipZh: '刚才你没有点。门又开了一线。两只杯在同一高度。你要怎么待这次交换？',
+        promptAfterActionZh: '门又开了一线。两只杯在同一高度。你要怎么待这次交换？',
+        promptAfterSkipZh: '门又开了一线。两只杯在同一高度。你要怎么待这次交换？',
         actions: [
           { id: 'level', kind: 'engage', labelZh: '把杯子递到同一高度', sentenceZh: '我把杯子递到和对方同一高度，不把对方当成答案。' },
           { id: 'wait', kind: 'engage', labelZh: '先看清谁的杯子更高', sentenceZh: '我先看清两只杯子是不是同一高度，再决定递不递。' },
@@ -251,8 +251,8 @@ describe('pause text', () => {
         cardId: 'pents_page',
         orientation: 'upright',
         pauseIndex: 2,
-        promptAfterActionZh: '沿着刚才那一步，掌心又多了一枚被端详的星币。你身上哪一种手艺够用在这一步？',
-        promptAfterSkipZh: '刚才你没有点。掌心又多了一枚被端详的星币。你身上哪一种手艺够用在这一步？',
+        promptAfterActionZh: '掌心又多了一枚被端详的星币。你身上哪一种手艺够用在这一步？',
+        promptAfterSkipZh: '掌心又多了一枚被端详的星币。你身上哪一种手艺够用在这一步？',
         actions: [
           { id: 'craft', kind: 'engage', labelZh: '用正在学的那门手艺', sentenceZh: '我用正在学的那门手艺，把第一步做完。' },
           { id: 'small', kind: 'engage', labelZh: '先只做一个最小的动作', sentenceZh: '我先做一个小到今天能做完的动作。' },
@@ -264,8 +264,8 @@ describe('pause text', () => {
         cardId: 'pents_page',
         orientation: 'upright',
         pauseIndex: 2,
-        promptAfterActionZh: '沿着刚才那一步，门缝里是一个把星币拿到眼前的人。你要怎么待这第一步？',
-        promptAfterSkipZh: '刚才你没有点。门缝里是一个把星币拿到眼前的人。你要怎么待这第一步？',
+        promptAfterActionZh: '门缝里是一个把星币拿到眼前的人。你要怎么待这第一步？',
+        promptAfterSkipZh: '门缝里是一个把星币拿到眼前的人。你要怎么待这第一步？',
         actions: [
           { id: 'look', kind: 'engage', labelZh: '让他先把星币看清', sentenceZh: '我让他把星币看清，再决定要不要进门。' },
           { id: 'step', kind: 'engage', labelZh: '请他跨进门来', sentenceZh: '我请他跨进门来，第一步在门槛里边。' },
@@ -281,9 +281,10 @@ describe('pause text', () => {
         expect(offer.promptZh).not.toContain('沿着刚才那一步');
       } else {
         expect(promptForPause(offer, 'action')).toBe(offer.promptAfterActionZh);
-        expect(offer.promptAfterActionZh).toContain('沿着刚才那一步');
+        expect(offer.promptAfterActionZh).toBe(offer.promptAfterSkipZh);
+        expect(offer.promptAfterActionZh).not.toContain('沿着刚才那一步');
         expect(promptForPause(offer, 'missing')).toBe(offer.promptAfterSkipZh);
-        expect(offer.promptAfterSkipZh).toContain('刚才你没有点');
+        expect(offer.promptAfterSkipZh).not.toContain('刚才你没有点');
         expect(offer.promptAfterSkipZh).not.toContain('沿着刚才那一步');
       }
       expect(offer.actions[2]?.kind).toBe('leave');

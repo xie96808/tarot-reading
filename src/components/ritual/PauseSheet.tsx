@@ -12,12 +12,15 @@ import styles from './PauseSheet.module.css';
 
 type PauseSheetProps = {
   sceneId: SceneId;
+  positionId: string;
   offer: PauseOffer;
   phase: 'choosing' | 'writing';
   custom: string;
   previous: 'action' | 'skip' | 'missing' | null;
   actionsEnabled: boolean;
   pendingFace?: boolean;
+  retryFace?: boolean;
+  onRetryFace?: () => void;
   onChoose: (actionId: string) => void;
   onCustom: (custom: string) => void;
   onConfirm: () => void;
@@ -27,12 +30,15 @@ type PauseSheetProps = {
 
 export function PauseSheet({
   sceneId,
+  positionId,
   offer,
   phase,
   custom,
   previous,
   actionsEnabled,
   pendingFace = false,
+  retryFace = false,
+  onRetryFace,
   onChoose,
   onCustom,
   onConfirm,
@@ -41,15 +47,14 @@ export function PauseSheet({
 }: PauseSheetProps) {
   const promptId = useId();
   const customId = useId();
-  const promptRef = useRef<HTMLHeadingElement>(null);
-  const customRef = useRef<HTMLHeadingElement>(null);
+  const customRef = useRef<HTMLInputElement>(null);
   const engages = offer.actions.filter((action) => action.kind === 'engage');
   const leave = offer.actions.find((action) => action.kind === 'leave');
   const count = [...custom].length;
 
   useEffect(() => {
-    if (phase === 'writing') customRef.current?.focus();
-    else promptRef.current?.focus();
+    if (phase !== 'writing') return;
+    customRef.current?.focus({ preventScroll: true });
   }, [phase]);
 
   return (
@@ -57,17 +62,23 @@ export function PauseSheet({
       role="region"
       className={styles.sheet}
       data-pause-sheet
+      data-pause-scene={sceneId}
       data-pause-phase={phase}
       data-actions-ready={actionsEnabled ? 'true' : 'false'}
       aria-labelledby={phase === 'writing' ? customId : promptId}
     >
       {phase === 'choosing' ? (
         <>
-          <p className={styles.lead}>{sceneId === 'door' ? COPY.pauseDoorLead : COPY.pauseHandLead}</p>
-          <h2 id={promptId} ref={promptRef} className={styles.prompt} tabIndex={0}>
+          <p className={styles.lead} aria-live="polite">{COPY.pauseLead(positionId)}</p>
+          <h2 id={promptId} className={styles.prompt} tabIndex={0}>
             {promptForPause(offer, previous)}
           </h2>
           {pendingFace ? <p className={styles.body} role="status">正在准备牌面…</p> : null}
+          {retryFace ? (
+            <button type="button" onClick={onRetryFace}>
+              {COPY.imageRetry}
+            </button>
+          ) : null}
           <div className={styles.actions}>
             {engages.map((action) => (
               <button
@@ -104,10 +115,11 @@ export function PauseSheet({
         </>
       ) : (
         <>
-          <h2 id={customId} ref={customRef} className={styles.prompt} tabIndex={0}>
+          <h2 id={customId} className={styles.prompt} tabIndex={0}>
             {COPY.pauseCustomTitle}
           </h2>
           <input
+            ref={customRef}
             className={styles.line}
             type="text"
             value={custom}
@@ -165,10 +177,6 @@ export function PauseMeaning({
   meaning: string;
 }) {
   const titleId = useId();
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  useEffect(() => {
-    titleRef.current?.focus();
-  }, []);
   return (
     <section
       role="region"
@@ -178,7 +186,7 @@ export function PauseMeaning({
       style={{ '--read-fade-ms': `${MOTION.readFadeMs}ms` } as CSSProperties}
     >
       {missing ? <p className={styles.body}>{COPY.pauseMissing}</p> : null}
-      <h2 id={titleId} ref={titleRef} className={styles.prompt} tabIndex={0}>
+      <h2 id={titleId} className={styles.prompt} tabIndex={0}>
         {COPY.pauseMeaningTitle}
       </h2>
       <p className={styles.privacy}>{COPY.pauseMeaningLead}</p>

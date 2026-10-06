@@ -54,9 +54,12 @@ describe('scene lock', () => {
     expect(reduce(back, { type: 'SET_SCENE', sceneId: 'door' }, sceneOn)).toBe(back);
   });
 
-  it('does not leave a three-card spread until a scene is chosen', () => {
+  it('starts a standard three-card shuffle when no scene is chosen', () => {
     const state = toSpread();
-    expect(reduce(state, { type: 'CONFIRM_SPREAD' }, sceneOn)).toBe(state);
+    const next = reduce(state, { type: 'CONFIRM_SPREAD' }, sceneOn);
+    expect(next.stage).toBe('shuffle');
+    expect(next.sceneId).toBeNull();
+    expect(next.sceneLocked).toBe(false);
   });
 
   it('locks the chosen scene when the three-card spread starts shuffling', () => {
@@ -116,7 +119,10 @@ describe('scene lock', () => {
     let state = createSession();
     state = reduce(state, { type: 'ACK_ENTER' });
     state = reduce(state, { type: 'SUBMIT_QUESTION' });
-    expect(reduce(state, { type: 'CONFIRM_SPREAD' })).toBe(state);
+    const standard = reduce(state, { type: 'CONFIRM_SPREAD' });
+    expect(standard.stage).toBe('shuffle');
+    expect(standard.sceneId).toBeNull();
+    expect(standard.sceneLocked).toBe(false);
     const door = reduce(state, { type: 'SET_SCENE', sceneId: 'door' });
     expect(door.sceneId).toBe('door');
     const shuffling = reduce(door, { type: 'CONFIRM_SPREAD' });

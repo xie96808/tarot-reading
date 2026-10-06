@@ -245,4 +245,45 @@ describe('ritual machine', () => {
     expect(state.question).toBe('隐私问题');
   });
 
+  it('starts a standard reading from the prepare step and reveals without a pause', () => {
+    let state = createSession();
+    state = reduce(state, { type: 'SET_QUESTION', question: '想看清什么' });
+    state = reduce(state, { type: 'SET_SPREAD', spreadId: 'three' });
+    state = reduce(state, { type: 'SET_REVERSALS', reversals: true });
+    state = reduce(state, { type: 'CONFIRM_SPREAD' });
+    expect(state.stage).toBe('shuffle');
+    expect(state.sceneId).toBeNull();
+    expect(state.sceneLocked).toBe(false);
+    if (state.stage !== 'shuffle') return;
+    expect(state.question).toBe('想看清什么');
+    state = reduce(state, { type: 'AUTO_SHUFFLE', operationId: 'std' });
+    state = reduce(state, {
+      type: 'SHUFFLE_COMMITTED',
+      sessionId: state.sessionId,
+      operationId: 'std',
+      deckPreCut: fakeDeck(),
+      commitFull: 'f'.repeat(64),
+      commitShort: 'f'.repeat(16),
+    });
+    state = reduce(state, { type: 'CONFIRM_CUT' });
+    state = reduce(state, { type: 'DEAL_DONE' });
+    state = reduce(state, { type: 'REVEAL_NEXT' });
+    expect(state.stage).toBe('reveal');
+    if (state.stage !== 'reveal') return;
+    expect(state.pause).toBeNull();
+    expect(state.revealed).toEqual(['past']);
+    state = reduce(state, { type: 'REVEAL_NEXT' });
+    state = reduce(state, { type: 'REVEAL_NEXT' });
+    expect(state.stage).toBe('read');
+    if (state.stage !== 'read') return;
+    expect(state.pauseAnswers).toEqual([]);
+
+    let fromQuestion = reduce(createSession(), { type: 'ACK_ENTER' });
+    fromQuestion = reduce(fromQuestion, { type: 'SET_SPREAD', spreadId: 'single' });
+    fromQuestion = reduce(fromQuestion, { type: 'CONFIRM_SPREAD' });
+    expect(fromQuestion.stage).toBe('shuffle');
+    expect(fromQuestion.spreadId).toBe('single');
+    expect(fromQuestion.sceneLocked).toBe(false);
+  });
+
 });

@@ -19,6 +19,7 @@ describe('PauseSheet', () => {
     const markup = html(
       createElement(PauseSheet, {
         sceneId: 'door',
+        positionId: 'past',
         offer,
         phase: 'choosing',
         custom: '',
@@ -31,7 +32,26 @@ describe('PauseSheet', () => {
         onRevert: noop,
       }),
     );
-    expect(markup).toContain('第一张是过去。先看看，有没有哪个细节让你停了一下？');
+    expect(markup).toContain('第一张：先看看过去。');
+    expect(markup).not.toContain('第一张是过去');
+    const present = html(
+      createElement(PauseSheet, {
+        sceneId: 'door',
+        positionId: 'present',
+        offer,
+        phase: 'choosing',
+        custom: '',
+        previous: null,
+        actionsEnabled: false,
+        onChoose: noop,
+        onCustom: noop,
+        onConfirm: noop,
+        onSkip: noop,
+        onRevert: noop,
+      }),
+    );
+    expect(present).toContain('第二张：看看现在。');
+    expect(present).not.toContain('第一张：先看看过去。');
     expect(markup).toContain(offer.promptZh);
     expect(markup).toContain('先把门带上');
     expect(markup).toContain('先不聊这个，看这张牌');
@@ -46,6 +66,7 @@ describe('PauseSheet', () => {
     const markup = html(
       createElement(PauseSheet, {
         sceneId: 'door',
+        positionId: 'past',
         offer,
         phase: 'writing',
         custom: '一句',

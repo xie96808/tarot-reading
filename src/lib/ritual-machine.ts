@@ -170,6 +170,17 @@ function firstUnrevealed(state: Extract<RitualSession, { stage: 'reveal' }>): st
   return positions(state.spreadId).map((p) => p.id).find((id) => !state.revealed.includes(id)) ?? null;
 }
 
+function beginShuffle(state: Extract<RitualSession, { stage: 'enter' | 'question' | 'spread' }>): RitualSession {
+  return {
+    ...state,
+    stage: 'shuffle',
+    shufflePhase: 'idle',
+    operationId: null,
+    // A null scene is the standard flip. A door or hand already chosen stays locked.
+    sceneLocked: state.sceneId !== null,
+  };
+}
+
 export function reduce(
   state: RitualSession,
   event: RitualEvent,
@@ -189,13 +200,21 @@ export function reduce(
   switch (state.stage) {
     case 'enter':
       if (event.type === 'ACK_ENTER') return { ...state, stage: 'question' };
+      if (event.type === 'SET_QUESTION') return { ...state, question: event.question };
+      if (event.type === 'SET_SPREAD') return { ...state, spreadId: event.spreadId };
+      if (event.type === 'SET_REVERSALS') return { ...state, reversals: event.reversals };
+      if (event.type === 'CONFIRM_SPREAD') return beginShuffle(state);
       return state;
     case 'question':
       if (event.type === 'SET_QUESTION') return { ...state, question: event.question };
+      if (event.type === 'SET_SPREAD') return { ...state, spreadId: event.spreadId };
+      if (event.type === 'SET_REVERSALS') return { ...state, reversals: event.reversals };
       if (event.type === 'SUBMIT_QUESTION') return { ...state, stage: 'spread' };
+      if (event.type === 'CONFIRM_SPREAD') return beginShuffle(state);
       if (event.type === 'BACK') return { ...state, stage: 'enter' };
       return state;
     case 'spread':
+      if (event.type === 'SET_QUESTION') return { ...state, question: event.question };
       if (event.type === 'SET_SPREAD') return { ...state, spreadId: event.spreadId };
       if (event.type === 'SET_REVERSALS') return { ...state, reversals: event.reversals };
       if (event.type === 'BACK') return { ...state, stage: 'question' };
@@ -203,13 +222,7 @@ export function reduce(
         if (!scenePause || state.sceneLocked || (event.sceneId === 'hand' && !HAND_SCENE_ENABLED)) return state;
         return { ...state, sceneId: event.sceneId };
       }
-      if (event.type === 'CONFIRM_SPREAD') {
-        if (scenePause && state.spreadId === 'three') {
-          if (state.sceneId === null) return state;
-          return { ...state, stage: 'shuffle', shufflePhase: 'idle', operationId: null, sceneLocked: true };
-        }
-        return { ...state, stage: 'shuffle', shufflePhase: 'idle', operationId: null };
-      }
+      if (event.type === 'CONFIRM_SPREAD') return beginShuffle(state);
       return state;
     case 'shuffle':
       return reduceShuffle(state, event);

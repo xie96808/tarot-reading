@@ -84,6 +84,17 @@
   padding: 12px;
 }
 
+.question {
+  min-height: 5.5rem;
+}
+
+.ask {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
 .spreads {
   list-style: none;
   padding: 0;
@@ -91,18 +102,60 @@
   gap: 12px;
 }
 
-.spreads button {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.spreads label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: center;
   padding: 16px;
   text-align: left;
+  border: 1px solid rgba(196, 163, 90, 0.35);
+  cursor: pointer;
 }
 
-.chosen button {
+.spreads input {
+  grid-row: 1 / -1;
+  align-self: center;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--candle);
+}
+
+.spreads strong,
+.spreads span,
+.spreads em {
+  grid-column: 2;
+}
+
+.spreads em {
+  color: var(--ash);
+  font-style: normal;
+  font-size: 14px;
+}
+
+.spreads label:has(input:checked) {
   border-color: var(--candle);
   background: rgba(196, 163, 90, 0.14);
+}
+
+.settings {
+  margin: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid rgba(196, 163, 90, 0.25);
+  padding: 12px 16px;
+}
+
+.settings legend {
+  padding: 0 6px;
+  color: var(--candle);
+}
+
+.settings .check {
+  justify-content: flex-start;
 }
 
 .check {
@@ -152,6 +205,19 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  text-align: left;
+}
+
+.examples summary {
+  min-height: 44px;
+  cursor: pointer;
+  padding: 12px 0;
+}
+
+.examples button {
+  border: none;
+  text-align: left;
+  color: var(--ash);
 }
 
 .modal {

@@ -1,10 +1,10 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { SPREADS, type SpreadId } from '@/data/lexicons/zh-1/spreads';
 import { CARDS } from '@/data/lexicons/zh-1';
 import type { Draw } from '@/lib/shuffle';
-import type { FaceUrls } from '@/lib/faces';
+import { FACE_SIZES, type FaceUrls } from '@/lib/faces';
 import { COPY } from '@/i18n/zh-CN';
 import { celticSlotLayout } from '@/lib/celtic-layout';
 import { dealDelayMs } from '@/lib/motion';
@@ -38,7 +38,6 @@ type TableauProps = {
   revealLocked?: boolean;
   /** When set, only this position may be opened. Empty string means none. Omit to allow every unrevealed card. */
   revealablePositionId?: string;
-  pauseSlot?: ReactNode;
 };
 
 export function Tableau({
@@ -54,7 +53,6 @@ export function Tableau({
   sceneInstant = null,
   revealLocked = false,
   revealablePositionId,
-  pauseSlot = null,
 }: TableauProps) {
   const [selection, setSelection] = useState({ revealed, position: selectedPositionId, animate: false });
   if (selection.revealed !== revealed || selection.position !== selectedPositionId) {
@@ -126,7 +124,7 @@ export function Tableau({
         animateOnMount={selection.animate}
         visual={sceneFor(selected.positionId)}
         urls={faceOn(selected.positionId, selectedRevealed) ? faces.get(selected.cardId) : undefined}
-        sizes="220px"
+        sizes={FACE_SIZES.step}
         reversed={selected.orientation === 'reversed'}
         crossing={false}
         dealing={dealing}
@@ -227,7 +225,6 @@ export function Tableau({
       {!dealing ? (
         <div className={styles.mobileColumn}>
           {stepped}
-          {!desktop ? pauseSlot : null}
         </div>
       ) : null}
       <div className={`${styles.row} ${dealing ? styles.dealingBoard : ''}`} role="list">
@@ -251,7 +248,7 @@ export function Tableau({
                 revealed={isRevealed}
                 visual={visual}
                 urls={urls}
-                sizes="(max-width: 720px) 220px, 170px"
+                sizes={FACE_SIZES.row}
                 reversed={draw.orientation === 'reversed'}
                 dealing={dealing}
                 dealDelayMs={dealDelayMs(position.drawOrder - 1, count)}
@@ -264,7 +261,6 @@ export function Tableau({
           );
         })}
       </div>
-      {desktop ? <div className={styles.desktopPause}>{pauseSlot}</div> : null}
     </div>
   );
 }

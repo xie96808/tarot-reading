@@ -59,12 +59,68 @@ export function subscribeFaceIndex(listener: (faces: Map<string, FaceUrls>) => v
   };
 }
 
+/** Sizes shared by the reveal preload and the card that actually flips. */
+export const FACE_SIZES = {
+  step: '220px',
+  row: '(max-width: 720px) 220px, 170px',
+} as const;
+
+export function revealFaceSizes(compact: boolean): string {
+  return compact ? FACE_SIZES.step : FACE_SIZES.row;
+}
+
+export function faceSlotKey(digest: string, sizes: string): string {
+  return `${digest}|${sizes}`;
+}
+
 export function pictureSources(urls: FaceUrls, sizes: string) {
   return {
     sizes,
     webpSrcSet: `${urls.variants[320].webp} 320w, ${urls.variants[480].webp} 480w, ${urls.variants[800].webp} 800w`,
     webpSrc: urls.variants[480].webp,
   };
+}
+
+const decodedSlots = new Set<string>();
+const decodingSlots = new Map<string, Promise<boolean>>();
+
+export function isFaceDecoded(digest: string, sizes: string): boolean {
+  return decodedSlots.has(faceSlotKey(digest, sizes));
+}
+
+export function forgetFaceDecode(digest: string, sizes: string): void {
+  const key = faceSlotKey(digest, sizes);
+  decodedSlots.delete(key);
+  decodingSlots.delete(key);
+}
+
+/** Resolves true only after the same candidate the card will paint has decoded. */
+export function decodeFace(urls: FaceUrls, sizes: string): Promise<boolean> {
+  const key = faceSlotKey(urls.digest, sizes);
+  if (decodedSlots.has(key)) return Promise.resolve(true);
+  const pendingDecode = decodingSlots.get(key);
+  if (pendingDecode) return pendingDecode;
+  if (typeof Image === 'undefined') return Promise.resolve(false);
+  const task = new Promise<boolean>((resolve) => {
+    const image = new Image();
+    const sources = pictureSources(urls, sizes);
+    image.sizes = sizes;
+    image.srcset = sources.webpSrcSet;
+    image.src = sources.webpSrc;
+    const finish = (ok: boolean) => {
+      if (ok) decodedSlots.add(key);
+      decodingSlots.delete(key);
+      resolve(ok);
+    };
+    if (typeof image.decode === 'function') {
+      image.decode().then(() => finish(true), () => finish(false));
+      return;
+    }
+    image.onload = () => finish(true);
+    image.onerror = () => finish(false);
+  });
+  decodingSlots.set(key, task);
+  return task;
 }
 
 export function cardKey(cardId: CardId, positionId: string): string {

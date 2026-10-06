@@ -115,21 +115,30 @@ describe('door major pause catalog', () => {
         pause1Sample.actions[2],
       ],
     };
-    const skipped: PauseOffer = {
+    const sameBody: PauseOffer = {
       ...pause2Sample,
       promptAfterSkipZh: pause2Sample.promptAfterActionZh,
+    };
+    const skipped: PauseOffer = {
+      ...pause2Sample,
+      promptAfterSkipZh: `刚才你没有点。${pause2Sample.promptAfterSkipZh}`,
+    };
+    const echoed: PauseOffer = {
+      ...pause2Sample,
+      promptAfterActionZh: `沿着刚才那一步，${pause2Sample.promptAfterActionZh}`,
     };
     expect(validateDoorOffers([continued]).length).toBeGreaterThan(0);
     expect(validateDoorOffers([copied]).length).toBeGreaterThan(0);
     expect(validateDoorOffers([wrongLeave]).length).toBeGreaterThan(0);
     expect(validateDoorOffers([bracket]).length).toBeGreaterThan(0);
+    expect(validateDoorOffers([sameBody])).toEqual([]);
     expect(validateDoorOffers([skipped]).length).toBeGreaterThan(0);
+    expect(validateDoorOffers([echoed]).length).toBeGreaterThan(0);
     expect(validateDoorOffers([continued]).some((failure) => failure.includes('沿着刚才那一步'))).toBe(
       true,
     );
-    expect(validateDoorOffers([skipped]).some((failure) => failure.includes('沿着刚才那一步'))).toBe(
-      true,
-    );
+    expect(validateDoorOffers([skipped]).some((failure) => failure.includes('刚才你没有点'))).toBe(true);
+    expect(validateDoorOffers([echoed]).some((failure) => failure.includes('沿着刚才那一步'))).toBe(true);
   });
 });
 

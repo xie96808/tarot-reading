@@ -39,8 +39,8 @@ function pause2(
     cardId,
     orientation,
     pauseIndex: 2,
-    promptAfterActionZh: `沿着刚才那一步，${body}`,
-    promptAfterSkipZh: `刚才你没有点。${body}`,
+    promptAfterActionZh: body,
+    promptAfterSkipZh: body,
     actions,
   };
 }

@@ -2,10 +2,8 @@ import { expect, test } from '@playwright/test';
 
 test('celtic cross reveals ten positions and grouped reading', async ({ page }) => {
   test.setTimeout(120_000);
-  await page.goto('/read');
-  await page.getByRole('button', { name: '我准备好了' }).click();
-  await page.getByRole('button', { name: '这次不设问题' }).click();
-  await page.getByRole('button', { name: /处境之镜/ }).click();
+  await page.goto('/read?spread=celtic');
+  await expect(page.getByRole('radio', { name: /处境之镜/ })).toBeChecked();
   await page.getByRole('button', { name: '开始洗牌' }).click();
   await page.getByRole('button', { name: '为我洗牌' }).click();
   await page.getByRole('button', { name: '让牌落在桌上' }).click({ timeout: 15_000 });

@@ -20,16 +20,13 @@ test('storage write failure shows a fallback notice without a render loop', asyn
   await page.addInitScript(() => { Storage.prototype.setItem = () => { throw new DOMException('quota', 'QuotaExceededError'); }; });
   await page.goto('/read');
   await expect(page.getByText('本次仅在当前页面保留', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '我准备好了' }).click();
-  await expect(page.getByRole('button', { name: '这次不设问题' })).toBeVisible();
+  await page.getByRole('button', { name: '开始洗牌' }).click();
+  await expect(page.getByRole('button', { name: '为我洗牌' })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
 test('visibility event cancels a held shuffle immediately', async ({ page }) => {
   await page.goto('/read');
-  await page.getByRole('button', { name: '我准备好了' }).click();
-  await page.getByRole('button', { name: '这次不设问题' }).click();
-  await page.getByRole('button', { name: '推门' }).click();
   await page.getByRole('button', { name: '开始洗牌' }).click();
   const scene = page.locator('[data-table-scene="play"]');
   await page.keyboard.down('Space');
@@ -56,15 +53,15 @@ test('manual reversed orientation survives timers and does not leak to another p
   await page.goto('/read');
   await page.getByRole('button', { name: '继续这局', exact: true }).click();
   const scene = page.locator('[data-table-scene="spread"]');
-  await scene.getByRole('button', { name: '看落牌方向' }).click();
-  // Cross the auto-upright deadline: explicit manual choice must win.
+  await expect(scene.getByRole('button', { name: '转正看图' })).toBeVisible();
+  await scene.getByRole('button', { name: '转正看图' }).click();
   await page.waitForTimeout(1000);
-  await expect(scene.getByRole('button', { name: '转正看清' })).toBeVisible();
-  await scene.getByRole('button', { name: '2 现在', exact: true }).click();
   await expect(scene.getByRole('button', { name: '看落牌方向' })).toBeVisible();
+  await scene.getByRole('button', { name: '2 现在', exact: true }).click();
+  await expect(scene.getByRole('button', { name: '转正看图' })).toBeVisible();
   await scene.getByRole('button', { name: '3 未来', exact: true }).click();
   await page.locator('main').locator('[data-reveal="primary"]').click();
-  await expect(scene.getByRole('button', { name: '看落牌方向' })).toBeVisible();
+  await expect(scene.getByRole('button', { name: '转正看图' })).toBeVisible();
   const flipped = scene.locator('[class*="inner"][class*="revealed"]:visible');
   await expect(flipped).toHaveCount(1);
 });

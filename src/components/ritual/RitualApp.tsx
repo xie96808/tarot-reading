@@ -11,14 +11,14 @@ import { abandonCopy } from '@/lib/ritual-copy';
 import { encodeReading } from '@/lib/reading-codec';
 import { commitShuffle, newOperationId, randomCutIndex } from '@/lib/ritual-effects';
 import { canResume, createSession, persistable, reduce, stepPositionId, type PauseAnswer, type RitualSession } from '@/lib/ritual-machine';
-import { HAND_SCENE_ENABLED, SCENE_PAUSE_ENABLED } from '@/lib/scene';
+import { SCENE_PAUSE_ENABLED } from '@/lib/scene';
 import { composeSceneClose, type PauseResolution } from '@/lib/scene-close';
 import { canFocusGatedPosition, nextGatedPosition } from '@/lib/pause';
 import { lockedSceneVisual, meaningAfterPauseMs, pauseActionsReadyMs, sceneBeatDurations, type SceneVisual } from '@/lib/scene-beats';
 import { toSharePayload } from '@/lib/share-payload';
 import type { Draw } from '@/lib/shuffle';
 import { clearSession, loadSession, pushHistory, saveSession, subscribeStorageStatus, storageStatusSnapshot, serverStorageStatusSnapshot } from '@/lib/storage';
-import { loadFaceIndex, pictureSources, subscribeFaceIndex, type FaceUrls } from '@/lib/faces';
+import { decodeFace, faceSlotKey, forgetFaceDecode, loadFaceIndex, revealFaceSizes, subscribeFaceIndex, type FaceUrls } from '@/lib/faces';
 import { MAX_NOTE_CODEPOINTS, MAX_QUESTION_CODEPOINTS } from '@/config/site';
 import type { PointerSample } from '@/lib/rng';
 import { MOTION, cutProportion, dealDurationMs, prefersReducedMotion, shuffleCommitHoldMs, sleep } from '@/lib/motion';
@@ -35,6 +35,21 @@ import { PauseMeaning, PauseSheet } from './PauseSheet';
 import { SceneCloseView, SceneFutureBeat } from './SceneCloseView';
 import styles from './RitualApp.module.css';
 import { useClientReady, usePageHidden, useReducedMotion } from '@/lib/browser-state';
+
+function useCompactStage(): boolean {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const media = window.matchMedia('(max-width: 1023px)');
+      media.addEventListener('change', onStoreChange);
+      return () => media.removeEventListener('change', onStoreChange);
+    },
+    () => window.matchMedia('(max-width: 1023px)').matches,
+    () => true,
+  );
+}
+
+const TABLE_FOCUS_STAGES = new Set<RitualSession['stage']>(['shuffle', 'cut']);
+const PAGE_SCROLL_STAGES = new Set<RitualSession['stage']>(['enter', 'question', 'spread', 'read', 'close']);
 
 function toResolution(answer: PauseAnswer): PauseResolution {
   if (answer.kind === 'action') {
@@ -61,6 +76,96 @@ function sceneCloseOf(state: RitualSession) {
     cards: CARDS,
     lookup: lookupPauseOffer,
   });
+}
+
+function PrepareForm({
+  state,
+  dispatch,
+}: {
+  state: Extract<RitualSession, { stage: 'enter' | 'question' | 'spread' }>;
+  dispatch: (event: Parameters<typeof reduce>[1]) => void;
+}) {
+  const sceneName = state.sceneId === 'hand' ? '过手' : state.sceneId === 'door' ? '推门' : null;
+  return (
+    <>
+      <h1>{COPY.questionTitle}</h1>
+      <label className={styles.ask}>
+        {COPY.questionLabel}
+        <textarea
+          className={`${styles.field} ${styles.question}`}
+          rows={3}
+          value={state.question}
+          maxLength={MAX_QUESTION_CODEPOINTS * 2}
+          placeholder={COPY.questionPlaceholder}
+          onChange={(event) => {
+            const next = [...event.target.value].slice(0, MAX_QUESTION_CODEPOINTS).join('');
+            dispatch({ type: 'SET_QUESTION', question: next });
+          }}
+          onKeyDown={(event) => {
+            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+              event.preventDefault();
+              dispatch({ type: 'CONFIRM_SPREAD' });
+            }
+          }}
+        />
+      </label>
+      {[...state.question].length > 0 ? (
+        <p className={styles.muted} aria-live="polite">
+          {COPY.questionCount([...state.question].length)}
+        </p>
+      ) : null}
+      <p className={styles.muted}>{COPY.questionPrivacy}</p>
+      <details className={styles.examples}>
+        <summary>{COPY.questionExamplesSummary}</summary>
+        {COPY.questionExamples.map((example) => (
+          <button key={example} type="button" onClick={() => dispatch({ type: 'SET_QUESTION', question: example })}>
+            {example}
+          </button>
+        ))}
+      </details>
+      <div className={styles.spreads} role="radiogroup" aria-label={COPY.spreadGroupLabel}>
+        {(Object.keys(SPREADS) as SpreadId[]).map((id) => {
+          const spread = SPREADS[id];
+          return (
+            <label key={id}>
+              <input
+                type="radio"
+                name="spread"
+                checked={state.spreadId === id}
+                onChange={() => dispatch({ type: 'SET_SPREAD', spreadId: id })}
+              />
+              <strong>
+                {spread.nameZh} · {spread.titleZh}
+              </strong>
+              <em>
+                {spread.positions.length} 张 · {spread.blurbZh} · {spread.durationZh}
+              </em>
+            </label>
+          );
+        })}
+      </div>
+      <fieldset className={styles.settings}>
+        <legend>{COPY.readingSettings}</legend>
+        <label className={styles.check}>
+          <input
+            type="checkbox"
+            checked={state.reversals}
+            onChange={(event) => dispatch({ type: 'SET_REVERSALS', reversals: event.target.checked })}
+          />
+          {COPY.reverseLabel}
+        </label>
+        <p className={styles.muted}>{COPY.reverseHint}</p>
+        <p className={styles.muted}>{COPY.reversedHint}</p>
+      </fieldset>
+      {sceneName ? <p>{COPY.sceneLocked(sceneName)}</p> : null}
+      <button type="button" className={styles.primary} onClick={() => dispatch({ type: 'CONFIRM_SPREAD' })}>
+        {COPY.spreadConfirm}
+      </button>
+      <p className={styles.muted}>
+        <Link href="/about#help">{COPY.prepareHelp}</Link>
+      </p>
+    </>
+  );
 }
 
 function chapter(stage: RitualSession['stage']): string {
@@ -226,19 +331,43 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
     return () => window.clearTimeout(timer);
   }, [state.stage, state.sessionId, cutCommitSession, reducedMotion, dispatch]);
 
+  const compactStage = useCompactStage();
+  const faceSizes = revealFaceSizes(compactStage);
+  const [decodedSlots, setDecodedSlots] = useState<ReadonlySet<string>>(() => new Set());
+  const [failedSlots, setFailedSlots] = useState<ReadonlySet<string>>(() => new Set());
+  const [faceAttempt, setFaceAttempt] = useState(0);
+  const [faceWait, setFaceWait] = useState<{ key: string | null; announced: boolean; stalled: boolean }>({
+    key: null,
+    announced: false,
+    stalled: false,
+  });
   const previewDraws = 'draws' in state ? state.draws : null;
   useEffect(() => {
     if (!previewDraws) return;
-    // Warm the same responsive WebP candidates before the user turns a card.
+    let cancelled = false;
     for (const draw of previewDraws) {
       const urls = faces.get(draw.cardId);
       if (!urls) continue;
-      const image = new Image();
-      image.sizes = '(max-width: 1023px) 170px, 130px';
-      image.srcset = pictureSources(urls, image.sizes).webpSrcSet;
-      image.src = urls.variants[320].webp;
+      const key = faceSlotKey(urls.digest, faceSizes);
+      decodeFace(urls, faceSizes).then((ok) => {
+        if (cancelled) return;
+        if (ok) {
+          setDecodedSlots((current) => (current.has(key) ? current : new Set(current).add(key)));
+          setFailedSlots((current) => {
+            if (!current.has(key)) return current;
+            const next = new Set(current);
+            next.delete(key);
+            return next;
+          });
+          return;
+        }
+        setFailedSlots((current) => (current.has(key) ? current : new Set(current).add(key)));
+      });
     }
-  }, [previewDraws, faces]);
+    return () => {
+      cancelled = true;
+    };
+  }, [previewDraws, faces, faceSizes, faceAttempt]);
 
   const finishFuture = useCallback(() => {
     dispatch({ type: 'FUTURE_BEAT_DONE' });
@@ -246,7 +375,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
 
   const sceneSpread = SCENE_PAUSE_ENABLED && state.spreadId === 'three';
   const sceneLive = sceneSpread && state.sceneLocked && state.sceneId !== null;
-  const shuffleNeedsScene = sceneSpread && state.stage === 'spread' && state.sceneId === null;
   const revealState = state.stage === 'reveal' ? state : null;
   const pause = revealState?.pause ?? null;
   const futureOpen = Boolean(revealState?.futureBeat === 'open');
@@ -269,7 +397,8 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   const faceReady = (positionId: string) => {
     if (!('draws' in state)) return false;
     const draw = state.draws.find((item) => item.positionId === positionId);
-    return Boolean(draw && faces.has(draw.cardId));
+    const urls = draw ? faces.get(draw.cardId) : undefined;
+    return Boolean(urls && decodedSlots.has(faceSlotKey(urls.digest, faceSizes)));
   };
   const sceneVisuals =
     sceneLive && sceneId && (state.stage === 'reveal' || state.stage === 'read')
@@ -298,7 +427,15 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
           ]),
         );
   const pauseDraw = pause && 'draws' in state ? state.draws.find((draw) => draw.positionId === pause.positionId) : undefined;
-  const pauseFaceReady = !pauseDraw || faces.has(pauseDraw.cardId);
+  const pauseFaceReady = !pauseDraw || faceReady(pauseDraw.positionId);
+  const pauseFaceKey = pauseDraw ? faces.get(pauseDraw.cardId) : undefined;
+  const pauseFaceFailed = Boolean(pauseFaceKey && failedSlots.has(faceSlotKey(pauseFaceKey.digest, faceSizes)));
+  const faceWaitKey = !pauseKey || pauseFaceReady ? null : `${pauseKey}:${faceAttempt}`;
+  if (faceWait.key !== faceWaitKey) {
+    setFaceWait({ key: faceWaitKey, announced: false, stalled: false });
+  }
+  const faceAnnounced = faceWait.key === faceWaitKey && faceWait.announced;
+  const faceStalled = faceWait.key === faceWaitKey && faceWait.stalled;
   const choicesReady = Boolean(pauseKey) && pauseFaceReady && (reducedMotion || pauseRestored || actionsReady);
   const gatedNext = sceneLive && revealState ? nextGatedPosition(revealState) : null;
   const pauseOffer = pause && pauseDraw && sceneId ? lookupPauseOffer(sceneId, pauseDraw.cardId, pauseDraw.orientation, pause.index) : null;
@@ -351,9 +488,25 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
   }, [state]);
 
   useEffect(() => {
+    if (!faceWaitKey) return;
+    const announce = window.setTimeout(() => {
+      setFaceWait((current) => (current.key === faceWaitKey ? { ...current, announced: true } : current));
+    }, 200);
+    const stall = window.setTimeout(() => {
+      setFaceWait((current) => (current.key === faceWaitKey ? { ...current, stalled: true } : current));
+    }, 8000);
+    return () => {
+      window.clearTimeout(announce);
+      window.clearTimeout(stall);
+    };
+  }, [faceWaitKey]);
+
+  useEffect(() => {
     const title = document.getElementById('stage-title');
     if (!title) return;
+    if (!TABLE_FOCUS_STAGES.has(state.stage) && !PAGE_SCROLL_STAGES.has(state.stage)) return;
     title.focus({ preventScroll: true });
+    if (!PAGE_SCROLL_STAGES.has(state.stage)) return;
     title.scrollIntoView({
       block: 'start',
       inline: 'nearest',
@@ -425,12 +578,10 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
         </button>
       ) : null}
 
-      {state.stage === 'enter' ? (
+      {state.stage === 'enter' || state.stage === 'question' || state.stage === 'spread' ? (
         <section className={`${styles.center} ${styles.stage}`}>
-          <div className={styles.candle} aria-hidden="true" />
-          <h1>{COPY.enterTitle}</h1>
-          <p>{COPY.enterBody}</p>
-          {pendingResume ? (
+          {state.stage === 'enter' ? <div className={styles.candle} aria-hidden="true" /> : null}
+          {state.stage === 'enter' && pendingResume ? (
             <>
               <p className={styles.warn}>
                 {pendingResume.stage === 'close' ? COPY.resumeClosedBody : COPY.resumeBody}
@@ -475,153 +626,14 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               </button>
             </>
           ) : (
-            <>
-              <button
-                type="button"
-                className={styles.primary}
-                autoFocus
-                onClick={() => dispatch({ type: 'ACK_ENTER' })}
-              >
-                {COPY.enterPrimary}
-              </button>
-              <Link href="/about">{COPY.enterSecondary}</Link>
-            </>
+            <PrepareForm state={state} dispatch={dispatch} />
           )}
-          <HistoryList />
-        </section>
-      ) : null}
-
-      {state.stage === 'question' ? (
-        <section className={`${styles.center} ${styles.stage}`}>
-          <h1>{COPY.questionTitle}</h1>
-          <p>{COPY.questionHint}</p>
-          <textarea
-            className={styles.field}
-            value={state.question}
-            maxLength={MAX_QUESTION_CODEPOINTS * 2}
-            placeholder={COPY.questionPlaceholder}
-            onChange={(event) => {
-              const next = [...event.target.value].slice(0, MAX_QUESTION_CODEPOINTS).join('');
-              dispatch({ type: 'SET_QUESTION', question: next });
-            }}
-            onKeyDown={(event) => {
-              if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-                dispatch({ type: 'SUBMIT_QUESTION' });
-              }
-            }}
-          />
-          {[...state.question].length > 0 ? (
-            <p className={styles.muted} aria-live="polite">
-              {COPY.questionCount([...state.question].length)}
-            </p>
-          ) : null}
-          <p className={styles.muted}>{COPY.questionPrivacy}</p>
-          <p className={styles.muted}>
-            {COPY.crisisResources}{' '}
-            <Link href="/about#help">方法页</Link>
-          </p>
-          <div className={styles.examples}>
-            {COPY.questionExamples.map((example) => (
-              <button key={example} type="button" onClick={() => dispatch({ type: 'SET_QUESTION', question: example })}>
-                {example}
-              </button>
-            ))}
-          </div>
-          <button type="button" className={styles.primary} onClick={() => dispatch({ type: 'SUBMIT_QUESTION' })}>
-            {COPY.questionContinue}
-          </button>
-          <button
-            type="button"
-            className={styles.ghost}
-            onClick={() => {
-              dispatch({ type: 'SET_QUESTION', question: '' });
-              dispatch({ type: 'SUBMIT_QUESTION' });
-            }}
-          >
-            {COPY.questionSkip}
-          </button>
-          <button type="button" className={styles.ghost} onClick={() => dispatch({ type: 'BACK' })}>
-            {COPY.backToEnter}
-          </button>
-        </section>
-      ) : null}
-
-      {state.stage === 'spread' ? (
-        <section className={`${styles.center} ${styles.stage}`}>
-          <ul className={styles.spreads}>
-            {(Object.keys(SPREADS) as SpreadId[]).map((id) => {
-              const spread = SPREADS[id];
-              return (
-                <li key={id} className={state.spreadId === id ? styles.chosen : undefined}>
-                  <button type="button" aria-pressed={state.spreadId === id} onClick={() => dispatch({ type: 'SET_SPREAD', spreadId: id })}>
-                    <strong>{spread.nameZh}</strong>
-                    <span>
-                      {spread.titleZh} · {spread.blurbZh}
-                    </span>
-                    <em>
-                      {spread.durationZh}
-                      {state.spreadId === id ? ' · 当前' : ''}
-                    </em>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          {sceneSpread ? (
-            <div className={styles.scenePicker} data-scene-picker>
-              <h2>{COPY.scenePickerTitle}</h2>
-              <p>{COPY.scenePickerBody}</p>
-              <div className={styles.sceneChoices}>
-                <button
-                  type="button"
-                  aria-pressed={state.sceneId === 'door'}
-                  disabled={state.sceneLocked}
-                  onClick={() => dispatch({ type: 'SET_SCENE', sceneId: 'door' })}
-                >
-                  <strong>{COPY.sceneDoor}</strong>
-                  <span>{COPY.sceneDoorHint}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={state.sceneId === 'hand'}
-                  disabled={!HAND_SCENE_ENABLED || state.sceneLocked}
-                  onClick={() => dispatch({ type: 'SET_SCENE', sceneId: 'hand' })}
-                >
-                  <strong>{COPY.sceneHand}</strong>
-                  <span>{HAND_SCENE_ENABLED ? COPY.sceneHandHint : COPY.sceneHandPending}</span>
-                </button>
-              </div>
-              {state.sceneLocked && (state.sceneId === 'door' || state.sceneId === 'hand') ? (
-                <p>{COPY.sceneLocked(state.sceneId === 'hand' ? '过手' : '推门')}</p>
-              ) : null}
-            </div>
-          ) : null}
-          <label className={styles.check}>
-            <input
-              type="checkbox"
-              checked={state.reversals}
-              onChange={(event) => dispatch({ type: 'SET_REVERSALS', reversals: event.target.checked })}
-            />
-            {COPY.reverseLabel}
-          </label>
-          <p className={styles.muted}>{COPY.reverseHint}</p>
-          <button
-            type="button"
-            className={styles.primary}
-            disabled={shuffleNeedsScene}
-            onClick={() => dispatch({ type: 'CONFIRM_SPREAD' })}
-          >
-            {COPY.spreadConfirm}
-          </button>
-          {shuffleNeedsScene ? <p>{COPY.sceneRequired}</p> : null}
-          <button type="button" className={styles.ghost} onClick={() => dispatch({ type: 'BACK' })}>
-            返回问题
-          </button>
+          {state.stage === 'enter' ? <HistoryList /> : null}
         </section>
       ) : null}
 
       {state.stage === 'shuffle' ? (
-        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`}>
+        <section className={`${styles.center} ${styles.tableStage}`}>
           <h1>{COPY.shuffleTitle}</h1>
           <p>{state.shufflePhase === 'committing' ? COPY.shuffleCommitting : COPY.shuffleHold}</p>
           <button
@@ -676,7 +688,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
       ) : null}
 
       {state.stage === 'cut' ? (
-        <section className={`${styles.center} ${styles.stage} ${styles.tableStage}`}>
+        <section className={`${styles.center} ${styles.tableStage}`}>
           <h1>{COPY.cutTitle}</h1>
           <p>
             {COPY.shuffleSealed} · {state.commitShort}
@@ -739,7 +751,7 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
       ) : null}
 
       {state.stage === 'deal' || state.stage === 'reveal' || state.stage === 'read' ? (
-        <section className={`${styles.stage} ${styles.tableStage}`}>
+        <section className={styles.tableStage}>
           {state.stage === 'deal' ? <p className={styles.dealHint}>牌正在落到桌上</p> : null}
           <div className={state.stage === 'read' && state.view === 'page' ? styles.tableParked : undefined}>
             <TableScene
@@ -763,24 +775,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
                 sceneInstant={sceneInstant}
                 revealLocked={navigationLocked}
                 revealablePositionId={sceneLive ? gatedNext ?? '' : undefined}
-                pauseSlot={
-                  SCENE_PAUSE_ENABLED && pause && pauseOffer && sceneId ? (
-                    <PauseSheet
-                      sceneId={sceneId}
-                      offer={pauseOffer}
-                      phase={pause.phase}
-                      custom={pause.custom}
-                      previous={previousKind}
-                      actionsEnabled={choicesReady}
-                      pendingFace={!pauseFaceReady}
-                      onChoose={(actionId) => dispatch({ type: 'CHOOSE_PAUSE', actionId })}
-                      onCustom={(custom) => dispatch({ type: 'SET_PAUSE_CUSTOM', custom })}
-                      onConfirm={() => dispatch({ type: 'CONFIRM_PAUSE' })}
-                      onSkip={() => dispatch({ type: 'SKIP_PAUSE' })}
-                      onRevert={() => dispatch({ type: 'REVERT_PAUSE' })}
-                    />
-                  ) : null
-                }
                 onSelect={(positionId) => dispatch({ type: 'SELECT_POSITION', positionId })}
                 onReveal={
                   state.stage === 'reveal' && !navigationLocked
@@ -790,6 +784,31 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
               />
             </TableScene>
           </div>
+          {SCENE_PAUSE_ENABLED && pause && pauseOffer && sceneId ? (
+            <PauseSheet
+              sceneId={sceneId}
+              positionId={pause.positionId}
+              offer={pauseOffer}
+              phase={pause.phase}
+              custom={pause.custom}
+              previous={previousKind}
+              actionsEnabled={choicesReady}
+              pendingFace={faceAnnounced && !pauseFaceReady}
+              retryFace={pauseFaceFailed || (faceStalled && !pauseFaceReady)}
+              onRetryFace={() => {
+                for (const draw of state.stage === 'reveal' ? state.draws : []) {
+                  const urls = faces.get(draw.cardId);
+                  if (urls) forgetFaceDecode(urls.digest, faceSizes);
+                }
+                setFaceAttempt((attempt) => attempt + 1);
+              }}
+              onChoose={(actionId) => dispatch({ type: 'CHOOSE_PAUSE', actionId })}
+              onCustom={(custom) => dispatch({ type: 'SET_PAUSE_CUSTOM', custom })}
+              onConfirm={() => dispatch({ type: 'CONFIRM_PAUSE' })}
+              onSkip={() => dispatch({ type: 'SKIP_PAUSE' })}
+              onRevert={() => dispatch({ type: 'REVERT_PAUSE' })}
+            />
+          ) : null}
           {SCENE_PAUSE_ENABLED && futureOpen && sceneClose && futureReading && sceneId ? (
             <SceneFutureBeat
               sceneId={sceneId}
@@ -939,16 +958,6 @@ function RitualClient({ initialSpread }: { initialSpread: SpreadId | null }) {
       {state.stage === 'close' && reading ? (
         <section className={`${styles.center} ${styles.stage}`}>
           <h1 className={styles.closeTitle}>{COPY.closeTitle}</h1>
-          <p>{COPY.closeBody}</p>
-          <ReadingView doc={reading} />
-          {sceneClose ? (
-            <SceneCloseView
-              sentences={sceneClose.sentences}
-              kept={sceneClose.kept}
-              keptIndex={state.keptPauseIndex}
-              selectable={false}
-            />
-          ) : null}
           <label className={styles.check}>
             <input
               type="checkbox"

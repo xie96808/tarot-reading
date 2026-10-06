@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { FaceUrls } from '@/lib/faces';
-import { pictureSources } from '@/lib/faces';
+import { isFaceDecoded, pictureSources, type FaceUrls } from '@/lib/faces';
 import { COPY } from '@/i18n/zh-CN';
 import styles from './CardFace.module.css';
 
@@ -16,7 +15,7 @@ export function CardFace({ urls, sizes, alt }: CardFaceProps) {
   const sources = pictureSources(urls, sizes);
   const [failed, setFailed] = useState(false);
   const [nonce, setNonce] = useState(0);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(() => isFaceDecoded(urls.digest, sizes));
   if (failed) {
     return (
       <div className={styles.fallback}>

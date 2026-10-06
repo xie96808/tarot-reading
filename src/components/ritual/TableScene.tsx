@@ -21,6 +21,7 @@ export function TableScene({ hand, children, onPointerDown, onPointerMove, onPoi
   onPointerCancel, label, layout = 'play', paused = false }: TableSceneProps) {
   const [jpegFallback, setJpegFallback] = useState(false);
   return (
+    <div className={styles.frame}>
     <div className={`${styles.scene} ${styles[layout]} ${onPointerDown ? styles.grab : ''}`}
       data-table-scene={layout} data-hand={hand} data-paused={paused}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
@@ -39,6 +40,7 @@ export function TableScene({ hand, children, onPointerDown, onPointerMove, onPoi
       </div>
       <span className={styles.inscription} aria-hidden="true">✦ &nbsp; 烛下 · 此刻 &nbsp; ✦</span>
       <div className={styles.content}>{children}</div>
+    </div>
     </div>
   );
 }

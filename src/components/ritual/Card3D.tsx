@@ -3,7 +3,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { FaceUrls } from '@/lib/faces';
 import { COPY } from '@/i18n/zh-CN';
-import { autoUprightDelayMs, MOTION, prefersReducedMotion } from '@/lib/motion';
+import { MOTION } from '@/lib/motion';
 import { sceneBeatDurations, type SceneVisual } from '@/lib/scene-beats';
 import { faceImageRotation, type FaceView } from '@/lib/transforms';
 import { useReducedMotion } from '@/lib/browser-state';
@@ -51,7 +51,7 @@ export function Card3D({
   const [presentation, setPresentation] = useState({
     revealed,
     flipped: revealed && !animateOnMount,
-    view: (revealed && reversed && !animateOnMount ? 'readable' : 'as-dealt') as FaceView,
+    view: 'as-dealt' as FaceView,
     manual: false,
     justRevealed: animateOnMount,
   });
@@ -73,11 +73,8 @@ export function Card3D({
   if (timedOpen.visual !== visual) setTimedOpen({ visual, open: false });
   const openFace = sceneFaceOpen(visual, pose.instant, timedOpen.open);
   const dealtNow = scene && (visual === 'back' || visual === 'door-partial' || visual === 'hand-partial');
-  const readableNow = openFace && reversed && pose.instant;
-  if (!presentation.manual && dealtNow && presentation.view !== 'as-dealt') {
+  if (dealtNow && presentation.view !== 'as-dealt') {
     setPresentation((current) => ({ ...current, view: 'as-dealt' }));
-  } else if (!presentation.manual && readableNow && presentation.view !== 'readable') {
-    setPresentation((current) => ({ ...current, view: 'readable' }));
   }
   const { flipped, view } = presentation;
 
@@ -85,15 +82,8 @@ export function Card3D({
     if (scene) return;
     if (!revealed) return;
     const frame = requestAnimationFrame(() => setPresentation((current) => ({ ...current, flipped: true })));
-    const delay = autoUprightDelayMs(reversed, prefersReducedMotion());
-    const timer = delay === null ? undefined : window.setTimeout(() => {
-      setPresentation((current) => current.manual ? current : { ...current, view: 'readable' });
-    }, delay);
-    return () => {
-      cancelAnimationFrame(frame);
-      if (timer !== undefined) window.clearTimeout(timer);
-    };
-  }, [revealed, reversed, scene]);
+    return () => cancelAnimationFrame(frame);
+  }, [revealed, scene]);
 
   useEffect(() => {
     if (introHold || !scene || !visual) return;
@@ -106,17 +96,6 @@ export function Card3D({
     const timer = window.setTimeout(() => setTimedOpen({ visual, open: true }), ms);
     return () => window.clearTimeout(timer);
   }, [introHold, scene, visual, pose.instant, pose.from]);
-
-  useEffect(() => {
-    // Partial must not use autoUprightDelayMs. Upright starts only after the face is fully open.
-    if (!scene || !reversed || !openFace) return;
-    if (visual !== 'door-full' && visual !== 'hand-settled') return;
-    if (pose.instant) return;
-    const timer = window.setTimeout(() => {
-      setPresentation((current) => current.manual ? current : { ...current, view: 'readable' });
-    }, MOTION.uprightPauseMs);
-    return () => window.clearTimeout(timer);
-  }, [scene, reversed, openFace, visual, pose.instant]);
 
   const beats = sceneBeatDurations(reduced);
   const showFace = scene ? visual !== 'back' : revealed;
@@ -147,7 +126,7 @@ export function Card3D({
         </div>
         <div className={styles.front}>
           <div className={styles.orient} style={{ transform: `rotate(${rotation}deg)` }}>
-            {showFace ? urls ? <CardFace key={urls.digest} urls={urls} sizes={sizes} alt={alt} /> : <div className={styles.waiting} role="status">正在准备牌面…</div> : null}
+            {showFace ? urls ? <CardFace key={`${urls.digest}:${sizes}`} urls={urls} sizes={sizes} alt={alt} /> : <div className={styles.waiting} role="status">正在准备牌面…</div> : null}
           </div>
         </div>
       </div>

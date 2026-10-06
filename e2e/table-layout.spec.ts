@@ -1,11 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 async function enter(page: Page, celtic = false) {
-  await page.goto('/read');
-  await page.getByRole('button', { name: '我准备好了' }).click();
-  await page.getByRole('button', { name: '这次不设问题' }).click();
-  if (celtic) await page.getByRole('button', { name: /处境之镜/ }).click();
-  else await page.getByRole('button', { name: '推门' }).click();
+  await page.goto(celtic ? '/read?spread=celtic' : '/read');
+  if (celtic) await expect(page.getByRole('radio', { name: /处境之镜/ })).toBeChecked();
   await page.getByRole('button', { name: '开始洗牌' }).click();
 }
 
@@ -40,14 +37,10 @@ for (const width of [375, 390, 719, 720, 721, 768, 1023, 1024, 1440]) {
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await scene.screenshot({ path: testInfo.outputPath(`table-${width}.png`) });
-    const skip = page.getByRole('button', { name: '先不聊这个，看这张牌' });
-    await next.click();
-    await expect(skip).toBeEnabled();
-    await skip.click();
-    await next.click();
-    await expect(skip).toBeEnabled();
-    await skip.click();
-    await next.click();
+    for (let i = 0; i < 3; i += 1) {
+      await expect(next).toBeVisible({ timeout: 8_000 });
+      await next.click();
+    }
     await expect(page.getByRole('heading', { name: '整阵线索' })).toBeVisible();
   });
 }
