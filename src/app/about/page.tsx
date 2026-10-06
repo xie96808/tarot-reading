@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: '方法' };
 
 export default function AboutPage() {
   return (
-    <main style={{ maxWidth: 720, margin: '0 auto', padding: '48px 20px 80px' }}>
+    <main className="readingCopy" style={{ maxWidth: 720, margin: '0 auto', padding: '48px 20px 80px' }}>
       <h1>方法</h1>
       <p>让随机负责相遇，让结构帮助理解，把决定留给自己。</p>
       <h2>牌是什么时候确定的</h2>

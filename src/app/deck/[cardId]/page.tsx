@@ -24,7 +24,7 @@ export default async function CardPage({ params }: Props) {
   if (!isCardId(cardId)) notFound();
   const card = CARDS[cardId];
   return (
-    <main style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px 80px' }}>
+    <main className="readingCopy" style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px 80px' }}>
       <p style={{ color: 'var(--candle)' }}>{card.arcana === 'major' ? '大阿尔卡纳' : '小阿尔卡纳'}</p>
       <h1>
         {card.nameZh} <span style={{ color: 'var(--ash)', fontSize: 20 }}>{card.nameEn}</span>

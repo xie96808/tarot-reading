@@ -32,6 +32,9 @@
 }
 
 .page {
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.8;
   background: var(--parchment);
   color: var(--frame);
   padding: var(--space-6);

@@ -1,18 +1,19 @@
-/* Same families and unicode ranges as the Fontsource CSS, without the unused woff files. */
+/* LXGW WenKai Screen 1.522 (SIL OFL). One subset of the fixed titles; typed questions stay on the system font. */
+@font-face {
+  font-family: 'LXGW WenKai Screen';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: local('LXGW WenKai Screen'), url(./fonts/lxgw-wenkai-screen-subset.woff2) format('woff2');
+}
+
+/* Full simplified Noto is for long reading only. Weight 500 is unused. */
 @font-face {
   font-family: 'Noto Serif SC';
   font-style: normal;
   font-display: swap;
   font-weight: 400;
   src: url(../../node_modules/@fontsource/noto-serif-sc/files/noto-serif-sc-chinese-simplified-400-normal.woff2) format('woff2');
-}
-
-@font-face {
-  font-family: 'Noto Serif SC';
-  font-style: normal;
-  font-display: swap;
-  font-weight: 500;
-  src: url(../../node_modules/@fontsource/noto-serif-sc/files/noto-serif-sc-chinese-simplified-500-normal.woff2) format('woff2');
 }
 
 @font-face {
