@@ -7,6 +7,7 @@ import { MOTION } from '@/lib/motion';
 import { sceneBeatDurations, type SceneVisual } from '@/lib/scene-beats';
 import { faceImageRotation, type FaceView } from '@/lib/transforms';
 import { useReducedMotion } from '@/lib/browser-state';
+import { RECEIVE_HAND_SRC, type ReceiveHandFrame } from '@/lib/table-hands';
 import { CardBack } from './CardBack';
 import { CardFace } from './CardFace';
 import styles from './Card3D.module.css';
@@ -165,7 +166,7 @@ export function Card3D({
     >
       {hand ? (
         <div className={styles.faceBox}>
-          <img className={styles.palm} data-part="palm" src="/hands/1.png" alt="" />
+          <ReceivePalm visual={visual} reduced={reduced} instant={pose.instant} introHold={introHold} />
           {flip}
         </div>
       ) : (
@@ -199,6 +200,48 @@ export function Card3D({
         </button>
       ) : null}
     </div>
+  );
+}
+
+
+function ReceivePalm({
+  visual,
+  reduced,
+  instant,
+  introHold,
+}: {
+  visual: SceneVisual | undefined;
+  reduced: boolean;
+  instant: boolean;
+  introHold: boolean;
+}) {
+  const snap = reduced || instant;
+  const settled = visual === 'hand-settled';
+  const animateAppear = !snap && !introHold && visual === 'hand-partial';
+  const [pose, setPose] = useState({ visual, holdReady: !animateAppear });
+  if (pose.visual !== visual) {
+    setPose({ visual, holdReady: !animateAppear });
+  }
+  useEffect(() => {
+    if (!animateAppear) return;
+    const timer = window.setTimeout(() => setPose((current) => ({ ...current, holdReady: true })), Math.max(160, MOTION.palmMs * 0.45));
+    return () => window.clearTimeout(timer);
+  }, [animateAppear, visual]);
+  const holdReady = pose.holdReady;
+  const frame: ReceiveHandFrame = settled ? 'withdraw' : holdReady || snap || introHold ? 'hold' : 'appear';
+  const src = RECEIVE_HAND_SRC[frame];
+  return (
+    <img
+      className={styles.palm}
+      data-part="palm"
+      data-palm-frame={frame}
+      key={src}
+      src={src}
+      alt=""
+      width={1000}
+      height={1200}
+      draggable={false}
+    />
   );
 }
 

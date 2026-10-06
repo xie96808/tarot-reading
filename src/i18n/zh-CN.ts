@@ -61,6 +61,7 @@ export const COPY = {
   revealAction: '翻开',
   revealSelected: (name: string) => `翻开${name}`,
   revealNextClosed: '翻开下一张未翻开的',
+  revealInProgress: '进行中',
   stepPrev: '上一位',
   stepNext: '下一位',
   backToEnter: '返回入席',

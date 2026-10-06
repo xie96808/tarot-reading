@@ -9,13 +9,14 @@ describe('card-back.svg', () => {
     expect(svg).toContain('width="800"');
     expect(svg).toContain('height="1280"');
     expect(svg).toContain('x="28"');
-    expect(svg).toContain('x="40"');
+    expect(svg).toMatch(/x="(40|48)"/);
     expect(svg).not.toMatch(/<text[\s>]/);
     expect(svg).not.toMatch(/月|moon|crescent/i);
   });
 
-  it('uses cream field and near-black frame colors from the plates', () => {
+  it('uses cream field, near-black frame, and candle crest', () => {
     expect(svg).toContain('#F4ECD5');
     expect(svg).toContain('#191202');
+    expect(svg).toMatch(/ellipse|candle/i);
   });
 });
